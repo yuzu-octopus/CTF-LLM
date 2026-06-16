@@ -1,0 +1,19 @@
+# Gemma 4 12B Configuration
+model:
+  name: unsloth/gemma-4-12b-it
+  target_modules: all-linear
+  r: 8
+  lora_alpha: 8
+  lora_dropout: 0
+  bias: none
+  max_seq_length: 4096
+  batch_size: 1
+  use_gradient_checkpointing: unsloth
+
+training:
+  num_train_epochs: 3
+  learning_rate: 2e-4
+  warmup_steps: 10
+  gradient_accumulation_steps: 4
+  optim: adamw_8bit
+  seed: 3407

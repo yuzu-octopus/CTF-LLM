@@ -1,0 +1,26 @@
+# Qwen 3.5 9B Configuration
+model:
+  name: unsloth/Qwen3.5-9B
+  target_modules:
+    - q_proj
+    - k_proj
+    - v_proj
+    - o_proj
+    - gate_proj
+    - up_proj
+    - down_proj
+  r: 16
+  lora_alpha: 16
+  lora_dropout: 0
+  bias: none
+  max_seq_length: 4096
+  batch_size: 1
+  use_gradient_checkpointing: unsloth
+
+training:
+  num_train_epochs: 3
+  learning_rate: 2e-4
+  warmup_steps: 10
+  gradient_accumulation_steps: 4
+  optim: adamw_8bit
+  seed: 3407
