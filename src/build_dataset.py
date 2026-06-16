@@ -64,6 +64,11 @@ DOC_SOURCES = [
     
     # One gadget
     {"type": "github_readme", "url": "https://github.com/david942j/one_gadget", "name": "onegadget-readme"},
+    
+    # Math/crypto libraries
+    {"type": "github_docs", "url": "https://github.com/sympy/sympy", "path": "docs", "name": "sympy-docs"},
+    {"type": "github_readme", "url": "https://github.com/aleaxit/gmpy2", "name": "gmpy2-readme"},
+    {"type": "github_docs", "url": "https://github.com/sagemath/sage", "path": "doc", "name": "sagemath-docs"},
 ]
 
 
@@ -77,6 +82,31 @@ def clone_repo(url: str, dest: str) -> bool:
         return False
 
 
+def extract_code_blocks(content: str) -> list:
+    """Extract code blocks from markdown content"""
+    pattern = r'```(\w+)?\n(.*?)```'
+    matches = re.findall(pattern, content, re.DOTALL)
+    code_blocks = []
+    for lang, code in matches:
+        code = code.strip()
+        if len(code) > 10:  # Skip trivial blocks
+            code_blocks.append({"lang": lang or "text", "code": code})
+    return code_blocks
+
+
+def extract_challenge_description(content: str) -> str:
+    """Extract challenge description from writeup markdown"""
+    # Remove code blocks for description extraction
+    cleaned = re.sub(r'```.*?```', '', content, flags=re.DOTALL)
+    # Remove excessive whitespace
+    cleaned = re.sub(r'\n{3,}', '\n\n', cleaned)
+    cleaned = cleaned.strip()
+    # Take first ~1500 chars as description
+    if len(cleaned) > 1500:
+        cleaned = cleaned[:1500] + "..."
+    return cleaned
+
+
 def extract_writeups_from_repo(repo_path: str, category: str) -> list:
     """Extract writeups from a cloned repo (markdown + code)"""
     examples = []
@@ -85,35 +115,74 @@ def extract_writeups_from_repo(repo_path: str, category: str) -> list:
     # Find all markdown files
     md_files = list(repo_path.rglob("*.md")) + list(repo_path.rglob("*.MD"))
     
+    # Instruction templates based on content type
+    INSTRUCTION_TEMPLATES = [
+        "Analyze this binary for vulnerabilities and provide an exploit",
+        "Explain this CTF challenge and solve it step by step",
+        "What is the vulnerability in this code? Write an exploit.",
+        "Reverse engineer this challenge and find the flag",
+        "Analyze the cryptography used and break the encryption",
+        "Write a solution script for this challenge",
+        "Identify the security flaw and demonstrate exploitation",
+    ]
+    
     for md_file in md_files:
         try:
             content = md_file.read_text(errors='ignore')
             if len(content) < 100:  # Skip very short files
                 continue
             
-            # Try to find associated code files
+            # Extract code blocks from markdown
+            code_blocks = extract_code_blocks(content)
+            
+            # Also try to find associated code files
             parent = md_file.parent
             code_files = list(parent.glob("*.py")) + list(parent.glob("*.c")) + list(parent.glob("*.sh"))
-            code_content = ""
             for cf in code_files[:3]:  # Max 3 code files
                 try:
-                    code_content += f"\n\n--- {cf.name} ---\n" + cf.read_text(errors='ignore')
+                    code_content = cf.read_text(errors='ignore')
+                    if len(code_content) > 10:
+                        code_blocks.append({"lang": cf.suffix[1:] or "text", "code": code_content})
                 except:
                     pass
             
             # Extract challenge name from filename or path
             challenge_name = md_file.stem.replace("-", " ").replace("_", " ").title()
             
-            # Create instruction/input/output
-            instruction = f"Explain this CTF challenge solution and provide the exploit code:"
-            input_text = f"Challenge: {challenge_name}\nCategory: {category}\n\n{content[:3000]}"
-            output_text = f"Challenge: {challenge_name}\n\n{content[:2000]}"
-            if code_content:
-                output_text += f"\n\nSolution code:{code_content[:2000]}"
+            # Extract challenge description (text without code)
+            description = extract_challenge_description(content)
+            
+            # Build output from code blocks
+            if code_blocks:
+                output_parts = [f"## Challenge: {challenge_name}\n"]
+                output_parts.append(f"Category: {category}\n")
+                output_parts.append(f"### Description\n{description}\n")
+                output_parts.append("### Solution\n")
+                for i, block in enumerate(code_blocks[:3]):  # Max 3 blocks
+                    lang = block["lang"]
+                    code = block["code"][:2000]
+                    output_parts.append(f"```{lang}\n{code}\n```\n")
+                output_text = "\n".join(output_parts)
+            else:
+                # No code found - create summary-based output
+                output_text = f"## Challenge: {challenge_name}\nCategory: {category}\n\n{description}\n"
+            
+            # Select instruction based on content hints
+            lower_content = content.lower()
+            if any(kw in lower_content for kw in ["binary", "pwn", "buffer overflow", "heap", "stack"]):
+                instruction = "Analyze this binary for vulnerabilities and provide an exploit"
+            elif any(kw in lower_content for kw in ["crypto", "rsa", "aes", "encrypt", "decrypt"]):
+                instruction = "Analyze the cryptography used and break the encryption"
+            elif any(kw in lower_content for kw in ["reverse", "flag", "hidden", "obfuscated"]):
+                instruction = "Reverse engineer this challenge and find the flag"
+            elif code_blocks:
+                instruction = "Write a solution script for this challenge"
+            else:
+                instruction = "Explain this CTF challenge and solve it step by step"
             
             examples.append({
-                "instruction": input_text,
-                "input": "",
+                "instruction": instruction,
+                "input": f"Challenge: {challenge_name}\nCategory: {category}\n\n{description}",
                 "output": output_text
             })
         except Exception as e:
