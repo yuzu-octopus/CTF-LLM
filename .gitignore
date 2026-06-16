@@ -1,0 +1,21 @@
+# Data (large files)
+data/raw/
+data/processed/
+data/merged/
+*.jsonl
+
+# Outputs
+outputs/
+*.pt
+*.bin
+*.safetensors
+
+# Python
+__pycache__/
+*.pyc
+.env
+venv/
+.venv/
+
+# OS
+.DS_Store
