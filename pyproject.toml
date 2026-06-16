@@ -1,0 +1,48 @@
+[project]
+name = "finetuning"
+version = "0.1.0"
+description = "Fine-tune LLMs for CTF and competitive programming using Unsloth with QLoRA"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    # Core ML
+    "unsloth",
+    "torch",
+    "transformers",
+    "datasets",
+    "trl",
+    "peft",
+    "accelerate",
+    "bitsandbytes",
+    
+    # Tokenizers
+    "sentencepiece",
+    "protobuf",
+    
+    # Experiment tracking
+    "wandb",
+    
+    # HTTP/Networking
+    "requests",
+    "httpx",
+    
+    # Git operations
+    "gitpython",
+    
+    # HuggingFace Hub
+    "huggingface-hub",
+    
+    # Utilities
+    "pyyaml",
+    "tqdm",
+]
+
+[project.scripts]
+finetune = "src.train:main"
+build-data = "src.build_dataset:main"
+process-data = "src.process_data:main"
+download-data = "src.download_datasets:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
