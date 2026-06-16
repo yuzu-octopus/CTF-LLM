@@ -10,6 +10,7 @@ from pathlib import Path
 import torch
 import yaml
 from unsloth import FastLanguageModel
+from unsloth.chat_templates import get_chat_template
 from trl import SFTTrainer, SFTConfig
 from datasets import load_dataset
 
@@ -32,9 +33,19 @@ def load_config(model_key: str, config_dir: str = "configs") -> dict:
     raise FileNotFoundError(f"No config found for model: {model_key}")
 
 
+def format_chat_template(examples, tokenizer):
+    """Format dataset using chat template"""
+    convos = examples["messages"]
+    texts = [
+        tokenizer.apply_chat_template(convo, tokenize=False, add_generation_prompt=False)
+        for convo in convos
+    ]
+    return {"text": texts}
+
+
 def train(model_key: str, data_file: str, output_dir: str, epochs: int = 3):
     config = load_config(model_key)
-    model_config = config.get("model", config)  # Handle both nested and flat configs
+    model_config = config.get("model", config)
     training_config = config.get("training", {})
     
     print(f"=== Training {model_key.upper()} ===")
@@ -50,6 +61,21 @@ def train(model_key: str, data_file: str, output_dir: str, epochs: int = 3):
         dtype=None,
     )
     
+    # Set up chat template based on model
+    if "gemma" in model_key.lower():
+        chat_template = "gemma_chatml"
+    elif "qwen" in model_key.lower():
+        chat_template = "chatml"
+    else:
+        chat_template = "chatml"
+    
+    tokenizer = get_chat_template(
+        tokenizer,
+        chat_template=chat_template,
+        mapping={"role": "from", "content": "value", "user": "human", "assistant": "gpt"},
+        map_eos_token=True,
+    )
+    
     # Configure LoRA
     model = FastLanguageModel.get_peft_model(
         model,
@@ -63,9 +89,15 @@ def train(model_key: str, data_file: str, output_dir: str, epochs: int = 3):
         max_seq_length=model_config["max_seq_length"],
     )
     
-    # Load dataset
+    # Load dataset (should be in messages format)
     dataset = load_dataset("json", data_files={"train": data_file}, split="train")
     print(f"Dataset size: {len(dataset)} examples")
+    
+    # Format dataset with chat template
+    dataset = dataset.map(
+        lambda examples: format_chat_template(examples, tokenizer),
+        batched=True,
+    )
     
     # Training config (optimized for T4)
     trainer = SFTTrainer(
@@ -86,6 +118,7 @@ def train(model_key: str, data_file: str, output_dir: str, epochs: int = 3):
             save_strategy=training_config.get("save_strategy", "epoch"),
             fp16=not torch.cuda.is_bf16_supported(),
             bf16=torch.cuda.is_bf16_supported(),
+            dataset_text_field="text",  # Use the formatted text field
         ),
     )
     
@@ -119,7 +152,7 @@ def main():
     parser = argparse.ArgumentParser(description="Unified CTF/Coding model fine-tuning")
     parser.add_argument("--model", choices=["gemma4", "qwen35"], required=True,
                        help="Model to fine-tune")
-    parser.add_argument("--data", default="data/merged_train.jsonl",
+    parser.add_argument("--data", default="data/merged/train.jsonl",
                        help="Training data file (JSONL)")
     parser.add_argument("--output", default=None,
                        help="Output directory (default: outputs/{model}-ctf)")

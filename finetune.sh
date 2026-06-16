@@ -14,26 +14,30 @@ echo "Model: $MODEL | Action: $ACTION"
 # Build dataset if requested
 if [[ "$ACTION" == "--build-data" ]] || [[ "$ACTION" == "--all" ]]; then
     echo ""
-    echo "[1/4] Building datasets..."
+    echo "[1/5] Building raw datasets..."
     uv run src/build_dataset.py --source writeups --max-per-repo 300
     uv run src/build_dataset.py --source docs --max-per-doc 100
     uv run src/download_datasets.py --dataset all --max-samples 5000
-    uv run src/download_datasets.py --dataset merge
+
+    echo ""
+    echo "[2/5] Processing to chat format..."
+    uv run src/process_data.py --input data/raw --output data/processed
+    uv run src/process_data.py --merge --input data/processed --output data/merged
 fi
 
 # Train if requested
 if [[ "$ACTION" == "--train" ]] || [[ "$ACTION" == "--all" ]]; then
     echo ""
-    echo "[2/4] Creating Colab session with T4 GPU..."
+    echo "[3/5] Creating Colab session with T4 GPU..."
     colab new -s "$SESSION_NAME" --gpu T4
 
     echo ""
-    echo "[3/4] Installing dependencies..."
+    echo "[4/5] Installing dependencies..."
     colab install -s "$SESSION_NAME" -r requirements.txt
 
     echo ""
-    echo "[4/4] Uploading and training..."
-    colab upload -s "$SESSION_NAME" data/ /content/data/
+    echo "[5/5] Uploading and training..."
+    colab upload -s "$SESSION_NAME" data/merged/ /content/data/merged/
     colab upload -s "$SESSION_NAME" src/ /content/src/
     colab upload -s "$SESSION_NAME" configs/ /content/configs/
     colab upload -s "$SESSION_NAME" config.yaml /content/config.yaml
