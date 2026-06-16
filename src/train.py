@@ -1,50 +1,51 @@
 """
 Unified Fine-tuning Script for CTF/Coding Models
-Usage: 
+Usage:
   colab run --gpu T4 src/train.py --model gemma4
   colab run --gpu T4 src/train.py --model qwen35
 """
 import argparse
+from pathlib import Path
+
 import torch
+import yaml
 from unsloth import FastLanguageModel
 from trl import SFTTrainer, SFTConfig
 from datasets import load_dataset
 
 
-# Model configurations
-MODEL_CONFIGS = {
-    "gemma4": {
-        "name": "unsloth/gemma-4-12b-it",
-        "target_modules": "all-linear",
-        "r": 8,
-        "lora_alpha": 8,
-        "max_seq_length": 4096,  # Reduced for T4
-        "batch_size": 1,
-    },
-    "qwen35": {
-        "name": "unsloth/Qwen3.5-9B",
-        "target_modules": ["q_proj", "k_proj", "v_proj", "o_proj",
-                          "gate_proj", "up_proj", "down_proj"],
-        "r": 16,
-        "lora_alpha": 16,
-        "max_seq_length": 4096,  # Reduced for T4
-        "batch_size": 1,
-    },
-}
+def load_config(model_key: str, config_dir: str = "configs") -> dict:
+    """Load model config from YAML file"""
+    config_path = Path(config_dir) / f"{model_key}.yaml"
+    
+    if config_path.exists():
+        with open(config_path) as f:
+            return yaml.safe_load(f)
+    
+    # Fallback to main config.yaml
+    main_config = Path("config.yaml")
+    if main_config.exists():
+        with open(main_config) as f:
+            full_config = yaml.safe_load(f)
+            return full_config.get("models", {}).get(model_key, {})
+    
+    raise FileNotFoundError(f"No config found for model: {model_key}")
 
 
 def train(model_key: str, data_file: str, output_dir: str, epochs: int = 3):
-    config = MODEL_CONFIGS[model_key]
+    config = load_config(model_key)
+    model_config = config.get("model", config)  # Handle both nested and flat configs
+    training_config = config.get("training", {})
     
     print(f"=== Training {model_key.upper()} ===")
-    print(f"Model: {config['name']}")
-    print(f"Max seq length: {config['max_seq_length']}")
-    print(f"LoRA rank: {config['r']}")
+    print(f"Model: {model_config['name']}")
+    print(f"Max seq length: {model_config['max_seq_length']}")
+    print(f"LoRA rank: {model_config['r']}")
     
     # Load model with 4-bit dynamic quantization
     model, tokenizer = FastLanguageModel.from_pretrained(
-        model_name=config["name"],
-        max_seq_length=config["max_seq_length"],
+        model_name=model_config["name"],
+        max_seq_length=model_config["max_seq_length"],
         load_in_4bit=True,
         dtype=None,
     )
@@ -52,14 +53,14 @@ def train(model_key: str, data_file: str, output_dir: str, epochs: int = 3):
     # Configure LoRA
     model = FastLanguageModel.get_peft_model(
         model,
-        r=config["r"],
-        target_modules=config["target_modules"],
-        lora_alpha=config["lora_alpha"],
-        lora_dropout=0,
-        bias="none",
-        use_gradient_checkpointing="unsloth",
-        random_state=3407,
-        max_seq_length=config["max_seq_length"],
+        r=model_config["r"],
+        target_modules=model_config["target_modules"],
+        lora_alpha=model_config["lora_alpha"],
+        lora_dropout=model_config.get("lora_dropout", 0),
+        bias=model_config.get("bias", "none"),
+        use_gradient_checkpointing=model_config.get("use_gradient_checkpointing", "unsloth"),
+        random_state=training_config.get("seed", 3407),
+        max_seq_length=model_config["max_seq_length"],
     )
     
     # Load dataset
@@ -72,17 +73,17 @@ def train(model_key: str, data_file: str, output_dir: str, epochs: int = 3):
         train_dataset=dataset,
         tokenizer=tokenizer,
         args=SFTConfig(
-            max_seq_length=config["max_seq_length"],
-            per_device_train_batch_size=config["batch_size"],
-            gradient_accumulation_steps=4,
-            warmup_steps=10,
+            max_seq_length=model_config["max_seq_length"],
+            per_device_train_batch_size=model_config.get("batch_size", 1),
+            gradient_accumulation_steps=training_config.get("gradient_accumulation_steps", 4),
+            warmup_steps=training_config.get("warmup_steps", 10),
             num_train_epochs=epochs,
-            learning_rate=2e-4,
+            learning_rate=training_config.get("learning_rate", 2e-4),
             logging_steps=1,
             output_dir=output_dir,
-            optim="adamw_8bit",
-            seed=3407,
-            save_strategy="epoch",
+            optim=training_config.get("optim", "adamw_8bit"),
+            seed=training_config.get("seed", 3407),
+            save_strategy=training_config.get("save_strategy", "epoch"),
             fp16=not torch.cuda.is_bf16_supported(),
             bf16=torch.cuda.is_bf16_supported(),
         ),

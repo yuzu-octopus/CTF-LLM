@@ -1,17 +1,18 @@
 """
 Custom Dataset Builder - Scrapes GitHub repos and docs, converts to Alpaca format
 Usage:
-  python3 src/build_dataset.py --source writeups
-  python3 src/build_dataset.py --source docs
-  python3 src/build_dataset.py --source all
+  uv run src/build_dataset.py --source writeups
+  uv run src/build_dataset.py --source docs
+  uv run src/build_dataset.py --source all
 """
 import json
 import re
 import argparse
 from pathlib import Path
-import subprocess
 import tempfile
-import shutil
+
+import requests
+from git import Repo
 
 try:
     from datasets import load_dataset
@@ -67,12 +68,9 @@ DOC_SOURCES = [
 
 
 def clone_repo(url: str, dest: str) -> bool:
-    """Clone a git repo"""
+    """Clone a git repo using gitpython"""
     try:
-        subprocess.run(
-            ["git", "clone", "--depth", "1", url, dest],
-            capture_output=True, timeout=60
-        )
+        Repo.clone_from(url, dest, depth=1)
         return Path(dest).exists()
     except Exception as e:
         print(f"  Failed to clone {url}: {e}")
@@ -157,15 +155,13 @@ def extract_from_huggingface(dataset_name: str, max_samples: int = 5000) -> list
 
 
 def scrape_documentation(url: str, name: str) -> list:
-    """Scrape a single documentation file"""
+    """Scrape a single documentation file using requests"""
     examples = []
     
     try:
-        result = subprocess.run(
-            ["curl", "-sL", url],
-            capture_output=True, text=True, timeout=30
-        )
-        content = result.stdout
+        response = requests.get(url, timeout=30)
+        response.raise_for_status()
+        content = response.text
         
         if len(content) < 100:
             return examples

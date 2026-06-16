@@ -1,0 +1,33 @@
+# Python dependencies for fine-tuning
+# Install with: uv pip install -r requirements.txt
+
+# Core ML
+unsloth
+torch
+transformers
+datasets
+trl
+peft
+accelerate
+bitsandbytes
+
+# Tokenizers
+sentencepiece
+protobuf
+
+# Experiment tracking
+wandb
+
+# HTTP/Networking
+requests
+httpx
+
+# Git operations
+gitpython
+
+# HuggingFace Hub
+huggingface-hub
+
+# Utilities
+pyyaml
+tqdm
