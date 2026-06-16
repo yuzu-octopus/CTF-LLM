@@ -1,0 +1,52 @@
+# Finetuning Configuration
+# Usage: ./finetune.sh --model gemma4
+
+# Default model
+default_model: gemma4
+
+# Model configurations
+models:
+  gemma4:
+    name: unsloth/gemma-4-12b-it
+    target_modules: all-linear
+    r: 8
+    lora_alpha: 8
+    max_seq_length: 4096
+    batch_size: 1
+    
+  qwen35:
+    name: unsloth/Qwen3.5-9B
+    target_modules:
+      - q_proj
+      - k_proj
+      - v_proj
+      - o_proj
+      - gate_proj
+      - up_proj
+      - down_proj
+    r: 16
+    lora_alpha: 16
+    max_seq_length: 4096
+    batch_size: 1
+
+# Training hyperparameters
+training:
+  num_train_epochs: 3
+  learning_rate: 2e-4
+  warmup_steps: 10
+  gradient_accumulation_steps: 4
+  optim: adamw_8bit
+  seed: 3407
+  save_strategy: epoch
+
+# Data configuration
+data:
+  raw_dir: data/raw
+  processed_dir: data/processed
+  merged_dir: data/merged
+  merged_file: data/merged/train.jsonl
+
+# Colab configuration
+colab:
+  gpu: T4
+  session_prefix: finetune
