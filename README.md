@@ -5,102 +5,88 @@ Fine-tune Gemma 4 12B and Qwen 3.5 9B using Unsloth with QLoRA on Google Colab (
 ## Quick Start
 
 ```bash
+# Install dependencies
+uv pip install -r requirements.txt
+
+# Build datasets and train (full pipeline)
+./finetune.sh gemma4 --all
+
+# Or just build data
+./finetune.sh gemma4 --build-data
+
+# Or just train (data must exist)
+./finetune.sh gemma4 --train
+```
+
+## Setup
+
+```bash
 # Install colab CLI (if not installed)
-pip install colab-cli
+uv tool install colab-cli
 
 # Setup authentication
 gcloud auth application-default login \
   --scopes=openid,https://www.googleapis.com/auth/cloud-platform,https://www.googleapis.com/auth/userinfo.email,https://www.googleapis.com/auth/colaboratory
-
-# Run fine-tuning (downloads datasets, creates Colab session, trains, downloads models)
-python3 src/download_datasets.py --dataset all --max-samples 5000
-python3 src/download_datasets.py --dataset merge
-python3 src/train.py --model gemma4
-python3 src/train.py --model qwen35
-```
-
-## Manual Colab CLI Workflow
-
-```bash
-# Download datasets locally first
-python3 src/download_datasets.py --dataset all --max-samples 5000
-python3 src/download_datasets.py --dataset merge
-
-# Create session with T4 GPU (free tier)
-colab new -s finetune --gpu T4
-
-# Install packages
-colab install -s finetune -r requirements.txt
-
-# Upload data and scripts
-colab upload -s finetune data/ /content/data/
-colab upload -s finetune src/ /content/src/
-
-# Run unified training script
-colab exec -s finetune -f src/train.py --model gemma4
-colab exec -s finetune -f src/train.py --model qwen35
-
-# Download results
-colab download -s finetune /content/outputs/ outputs/
-
-# Stop session (important!)
-colab stop -s finetune
 ```
 
 ## Project Structure
 
 ```
 finetuning/
+├── finetune.sh              # Main entry script
+├── config.yaml              # Main configuration
+├── requirements.txt         # Dependencies (uv)
+├── README.md
+├── data/
+│   ├── raw/                 # Scraped/downloaded data
+│   ├── processed/           # Alpaca format
+│   └── merged/              # Final training data
 ├── src/
-│   ├── train.py                # Unified training script (all models)
-│   ├── build_dataset.py        # Dataset builder from CTF writeups and docs
-│   └── download_datasets.py    # Dataset download utility
-├── data/                       # Training data (downloaded)
-├── requirements.txt            # Python dependencies
-└── README.md
+│   ├── train.py             # Unified training script
+│   ├── build_dataset.py     # Dataset builder (GitHub scraping)
+│   └── download_datasets.py # HuggingFace downloads
+└── configs/
+    ├── gemma4.yaml          # Gemma 4 config
+    └── qwen35.yaml          # Qwen 3.5 config
 ```
 
 ## Adding New Models
 
-Edit `MODEL_CONFIGS` in `src/train.py`:
+1. Create `configs/newmodel.yaml`:
+```yaml
+model:
+  name: unsloth/new-model
+  target_modules: all-linear
+  r: 16
+  lora_alpha: 16
+  max_seq_length: 4096
+  batch_size: 1
 
-```python
-MODEL_CONFIGS = {
-    "gemma4": {
-        "name": "unsloth/gemma-4-12b-it",
-        "target_modules": "all-linear",
-        "r": 8,
-        "lora_alpha": 8,
-        "max_seq_length": 4096,
-        "batch_size": 1,
-    },
-    "qwen35": {
-        "name": "unsloth/Qwen3.5-9B",
-        "target_modules": ["q_proj", "k_proj", ...],
-        "r": 16,
-        "lora_alpha": 16,
-        "max_seq_length": 4096,
-        "batch_size": 1,
-    },
-    # Add more models here...
-}
+training:
+  num_train_epochs: 3
+  learning_rate: 2e-4
 ```
 
-Then run: `python3 src/train.py --model <model_name>`
+2. Add to `config.yaml` under `models:` section
 
-## Datasets Used
+3. Run: `./finetune.sh newmodel --all`
 
-### CTF (pwn, rev, web, crypto)
+## Datasets
+
+### Custom (scraped from GitHub)
+- picoCTF writeups (250+ challenges)
+- CryptoHack solutions
+- pwnCollege writeups
+- Multi-category CTF collections (Adamkadaban/CTFs, 832 stars)
+
+### Documentation
+- pwntools, angr, ROPgadget, Ropper, one_gadget
+
+### HuggingFace
+- `nvidia/OpenCodeReasoning` - 735K competitive programming samples
 - `Jacqkues/ctf_webserver_v0.1` - 340 web CTF challenges
-- `justinwangx/CTFtime` - 18K CTF writeups across all categories
-
-### Competitive Programming
-- `nvidia/OpenCodeReasoning` - 735K samples, 28K problems (best for SFT)
-- `open-r1/codeforces-cots` - 48K with chain-of-thought traces
-
-### Cybersecurity
-- `AlicanKiraz0/Cybersecurity-Dataset-Fenrir-v2.1` - 99.8K examples
-- `ayshajavd/code-security-vulnerability-dataset` - 175K examples
+- `AlicanKiraz0/Cybersecurity-Dataset-Fenrir-v2.1` - 99.8K cybersecurity examples
+- `ayshajavd/code-security-vulnerability-dataset` - 175K vulnerability examples
 
 ## Models
 
@@ -111,7 +97,7 @@ Then run: `python3 src/train.py --model <model_name>`
 
 ## Export Formats
 
-Models are exported to:
+Models are exported to `outputs/<model>-ctf/`:
 - `lora/` - LoRA adapter
 - `gguf/` - GGUF for llama.cpp/Ollama
 - `merged/` - Merged 16-bit SafeTensors
