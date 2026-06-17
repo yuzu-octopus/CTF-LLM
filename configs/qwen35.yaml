@@ -1,6 +1,7 @@
 # Qwen 3.5 9B Configuration
+# Based on Unsloth docs: https://unsloth.ai/docs/models/qwen3.5/fine-tune
 model:
-  name: unsloth/Qwen3.5-9B
+  name: Qwen/Qwen3.5-9B
   target_modules:
     - q_proj
     - k_proj
@@ -15,6 +16,7 @@ model:
   bias: none
   max_seq_length: 4096
   batch_size: 1
+  load_in_4bit: true
   use_gradient_checkpointing: unsloth
 
 training:
