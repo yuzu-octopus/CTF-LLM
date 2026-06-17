@@ -1,7 +1,7 @@
 # Qwen 3.5 9B Configuration
-# Based on Unsloth docs: https://unsloth.ai/docs/models/qwen3.5/fine-tune
+# QLoRA with load_in_4bit=True works on T4 (~6GB weights)
 model:
-  name: Qwen/Qwen3.5-9B
+  name: unsloth/Qwen3.5-9B
   target_modules:
     - q_proj
     - k_proj
