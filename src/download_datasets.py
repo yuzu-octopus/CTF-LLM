@@ -20,12 +20,12 @@ def download_ctf_webserver(output_path="data/ctf_webserver.jsonl"):
     print("\n  [1/5] Downloading ctf_webserver_v0.1...")
     start_time = time.time()
     ds = load_dataset("Jacqkues/ctf_webserver_v0.1", split="train")
-    
+
     count = 0
     data_iter = ds
     if HAS_TQDM:
         data_iter = tqdm(ds, desc="    ctf_webserver", unit="row")
-    
+
     with open(output_path, "w") as f:
         for item in data_iter:
             messages = item.get("messages", [])
@@ -38,44 +38,15 @@ def download_ctf_webserver(output_path="data/ctf_webserver.jsonl"):
                     "output": output
                 }) + "\n")
                 count += 1
-    
+
     elapsed = time.time() - start_time
     print(f"  ✓ ctf_webserver: {count} examples ({elapsed:.1f}s)")
     return output_path
 
 
-def download_ctftime(output_path="data/ctftime.jsonl", max_samples=5000):
-    """Download justinwangx/CTFtime (CTF writeups)"""
-    print("\n  [2/5] Downloading CTFtime writeups...")
-    start_time = time.time()
-    ds = load_dataset("justinwangx/CTFtime", split="train")
-    
-    count = 0
-    data_iter = ds
-    if HAS_TQDM:
-        data_iter = tqdm(ds, total=min(len(ds), max_samples), desc="    ctftime", unit="row")
-    
-    with open(output_path, "w") as f:
-        for item in data_iter:
-            if count >= max_samples:
-                break
-            text = item.get("text_chunk", "")
-            if len(text) > 100:
-                f.write(json.dumps({
-                    "instruction": "Explain this CTF challenge solution and provide the exploit code:",
-                    "input": text[:2000],
-                    "output": "See the analysis above."
-                }) + "\n")
-                count += 1
-    
-    elapsed = time.time() - start_time
-    print(f"  ✓ ctftime: {count} examples ({elapsed:.1f}s)")
-    return output_path
-
-
 def download_opencode_reasoning(output_path="data/opencode_reasoning.jsonl", max_samples=10000):
     """Download nvidia/OpenCodeReasoning (competitive programming)"""
-    print("\n  [3/5] Downloading nvidia/OpenCodeReasoning...")
+    print("\n  [2/4] Downloading nvidia/OpenCodeReasoning...")
     start_time = time.time()
     ds = load_dataset("nvidia/OpenCodeReasoning", split="train")
     
@@ -107,7 +78,7 @@ def download_opencode_reasoning(output_path="data/opencode_reasoning.jsonl", max
 
 def download_fenrir(output_path="data/fenrir_cybersecurity.jsonl", max_samples=10000):
     """Download AlicanKiraz0/Cybersecurity-Dataset-Fenrir-v2.1"""
-    print("\n  [4/5] Downloading Cybersecurity Dataset Fenrir v2.1...")
+    print("\n  [3/4] Downloading Cybersecurity Dataset Fenrir v2.1...")
     start_time = time.time()
     ds = load_dataset("AlicanKiraz0/Cybersecurity-Dataset-Fenrir-v2.1", split="train")
     
@@ -139,7 +110,7 @@ def download_fenrir(output_path="data/fenrir_cybersecurity.jsonl", max_samples=1
 
 def download_vulnerability(output_path="data/vulnerability_detection.jsonl", max_samples=10000):
     """Download ayshajavd/code-security-vulnerability-dataset"""
-    print("\n  [5/5] Downloading code-security-vulnerability-dataset...")
+    print("\n  [4/4] Downloading code-security-vulnerability-dataset...")
     start_time = time.time()
     ds = load_dataset("ayshajavd/code-security-vulnerability-dataset", split="train")
     
@@ -188,11 +159,11 @@ def merge_datasets(input_files, output_path="data/merged_train.jsonl"):
 def main():
     parser = argparse.ArgumentParser(description="Download and prepare CTF/coding datasets")
     parser.add_argument("--dataset", choices=[
-        "ctf-webserver", "ctftime", "opencode-reasoning", 
+        "ctf-webserver", "opencode-reasoning",
         "fenrir", "vulnerability", "all", "merge"
     ], required=True)
     parser.add_argument("--max-samples", type=int, default=10000)
-    parser.add_argument("--output-dir", default="data")
+    parser.add_argument("--output-dir", default="data/raw")
     args = parser.parse_args()
     
     start_time = time.time()
@@ -205,8 +176,6 @@ def main():
     
     if args.dataset == "ctf-webserver":
         download_ctf_webserver(f"{args.output_dir}/ctf_webserver.jsonl")
-    elif args.dataset == "ctftime":
-        download_ctftime(f"{args.output_dir}/ctftime.jsonl", args.max_samples)
     elif args.dataset == "opencode-reasoning":
         download_opencode_reasoning(f"{args.output_dir}/opencode_reasoning.jsonl", args.max_samples)
     elif args.dataset == "fenrir":
@@ -215,7 +184,6 @@ def main():
         download_vulnerability(f"{args.output_dir}/vulnerability_detection.jsonl", args.max_samples)
     elif args.dataset == "all":
         download_ctf_webserver(f"{args.output_dir}/ctf_webserver.jsonl")
-        download_ctftime(f"{args.output_dir}/ctftime.jsonl", args.max_samples)
         download_opencode_reasoning(f"{args.output_dir}/opencode_reasoning.jsonl", args.max_samples)
         download_fenrir(f"{args.output_dir}/fenrir_cybersecurity.jsonl", args.max_samples)
         download_vulnerability(f"{args.output_dir}/vulnerability_detection.jsonl", args.max_samples)
@@ -223,7 +191,6 @@ def main():
         print("\n=== Merging datasets ===")
         files = [
             f"{args.output_dir}/ctf_webserver.jsonl",
-            f"{args.output_dir}/ctftime.jsonl",
             f"{args.output_dir}/opencode_reasoning.jsonl",
             f"{args.output_dir}/fenrir_cybersecurity.jsonl",
             f"{args.output_dir}/vulnerability_detection.jsonl",

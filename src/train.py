@@ -85,11 +85,8 @@ def train(model_key: str, data_file: str, output_dir: str, epochs: int = 3):
     from unsloth import get_chat_template
     
     if model_key == "gemma4":
-        # Gemma 4 uses processor, not tokenizer for chat template
         processor = get_chat_template(processor, "gemma-4")
         tokenizer = processor.tokenizer
-    elif model_key in ("qwen35", "qwen35-4b"):
-        tokenizer = get_chat_template(tokenizer, "chatml")
     else:
         tokenizer = get_chat_template(tokenizer, "chatml")
 
@@ -149,7 +146,7 @@ def train(model_key: str, data_file: str, output_dir: str, epochs: int = 3):
     trainer = SFTTrainer(
         model=model,
         train_dataset=dataset,
-        tokenizer=tokenizer,
+        processing_class=tokenizer,
         args=SFTConfig(
             max_seq_length=model_config["max_seq_length"],
             per_device_train_batch_size=model_config.get("batch_size", 1),
@@ -183,15 +180,21 @@ def train(model_key: str, data_file: str, output_dir: str, epochs: int = 3):
     tokenizer.save_pretrained(lora_path)
     print(f"    ✓ {lora_path}")
     
-    print("  Exporting GGUF model...")
-    gguf_path = f"{output_dir}/gguf"
-    model.save_pretrained_gguf(gguf_path, tokenizer, quantization_method="q4_k_m")
-    print(f"    ✓ {gguf_path}")
-    
-    print("  Exporting merged model...")
-    merged_path = f"{output_dir}/merged"
-    model.save_pretrained_merged(merged_path, tokenizer, save_method="merged_16bit")
-    print(f"    ✓ {merged_path}")
+    if model_key == "gemma4":
+        print("  Skipping GGUF export (not supported on FastVisionModel)")
+    else:
+        print("  Exporting GGUF model...")
+        gguf_path = f"{output_dir}/gguf"
+        model.save_pretrained_gguf(gguf_path, tokenizer, quantization_method="q4_k_m")
+        print(f"    ✓ {gguf_path}")
+
+    if model_key == "gemma4":
+        print("  Skipping merged export (not supported on FastVisionModel)")
+    else:
+        print("  Exporting merged model...")
+        merged_path = f"{output_dir}/merged"
+        model.save_pretrained_merged(merged_path, tokenizer, save_method="merged_16bit")
+        print(f"    ✓ {merged_path}")
     
     total_elapsed = time.time() - total_start
     print(f"\n{'='*50}")

@@ -53,7 +53,7 @@ CTF_WRITEUP_REPOS = [
 # Documentation repos/files to scrape (fixed URLs)
 DOC_SOURCES = [
     # pwntools
-    {"type": "github_docs", "url": "https://github.com/Gallopsled/pwntools", "path": "docs", "name": "pwntools-docs"},
+    {"type": "github_docs", "url": "https://github.com/Gallopsled/pwntools", "branch": "dev", "path": "docs", "name": "pwntools-docs"},
     {"type": "github_file", "url": "https://raw.githubusercontent.com/Gallopsled/pwntools-write-ups/master/README.md", "name": "pwntools-writeups-readme"},
     
     # angr (fixed: using main README)
@@ -170,21 +170,8 @@ def extract_writeups_from_repo(repo_path: str, category: str, repo_name: str) ->
     examples = []
     repo_path = Path(repo_path)
     
-    md_files = []
-    for md_file in repo_path.rglob("*.md"):
-        if md_file.parent == repo_path and md_file.name.lower() == "readme.md":
-            continue
-        if md_file.name.lower() == "readme.md" and len(md_file.parts) - len(repo_path.parts) <= 1:
-            continue
-        md_files.append(md_file)
-    for md_file in repo_path.rglob("*.MD"):
-        if md_file.parent == repo_path and md_file.name.lower() == "readme.md":
-            continue
-        if md_file.name.lower() == "readme.md" and len(md_file.parts) - len(repo_path.parts) <= 1:
-            continue
-        md_files.append(md_file)
-    
-    md_files = list(set(md_files))
+    md_files = list({p for p in repo_path.rglob("*.[mM][dD]")})
+    md_files = [p for p in md_files if not (p.name.lower() == "readme.md" and p.parent == repo_path)]
     
     total_files = len(md_files)
     extracted = 0
@@ -210,7 +197,7 @@ def extract_writeups_from_repo(repo_path: str, category: str, repo_name: str) ->
                     code_content = cf.read_text(errors='ignore')
                     if len(code_content) > 10:
                         code_blocks.append({"lang": cf.suffix[1:] or "text", "code": code_content})
-                except:
+                except Exception:
                     pass
             
             description = extract_challenge_description(content)
@@ -252,8 +239,8 @@ def extract_writeups_from_repo(repo_path: str, category: str, repo_name: str) ->
             
             if not HAS_TQDM and ((idx + 1) % 10 == 0 or idx + 1 == total_files):
                 print(f"    [{idx + 1}/{total_files}] files processed, {extracted} extracted so far", flush=True)
-                
-        except Exception as e:
+
+        except Exception:
             continue
     
     elapsed = time.time() - start_time
@@ -399,7 +386,9 @@ def build_docs_dataset(output_path: str, max_per_doc: int = 200):
         if doc["type"] == "github_file" or doc["type"] == "github_readme":
             examples = scrape_documentation(doc["url"], doc["name"])
         elif doc["type"] == "github_docs":
-            readme_url = doc["url"].replace("github.com", "raw.githubusercontent.com") + "/dev/README.md"
+            raw_url = doc["url"].replace("github.com", "raw.githubusercontent.com")
+            branch = doc.get("branch", "main")
+            readme_url = f"{raw_url}/refs/heads/{branch}/{doc.get('path', '')}/README.md"
             examples = scrape_documentation(readme_url, doc["name"])
         else:
             examples = []
@@ -451,17 +440,16 @@ def main():
     if args.source == "writeups":
         build_writeups_dataset(f"{args.output_dir}/writeups.jsonl", args.max_per_repo)
     elif args.source == "docs":
-        build_docs_dataset(f"{args.output_dir}/docs.jsonl", args.max_per_repo)
+        build_docs_dataset(f"{args.output_dir}/docs.jsonl", args.max_per_doc)
     elif args.source == "all":
         build_writeups_dataset(f"{args.output_dir}/writeups.jsonl", args.max_per_repo)
-        build_docs_dataset(f"{args.output_dir}/docs.jsonl", args.max_per_repo)
+        build_docs_dataset(f"{args.output_dir}/docs.jsonl", args.max_per_doc)
     elif args.source == "merge":
         print("\n=== Merging datasets ===")
         files = [
             f"{args.output_dir}/writeups.jsonl",
             f"{args.output_dir}/docs.jsonl",
             f"{args.output_dir}/ctf_webserver.jsonl",
-            f"{args.output_dir}/ctftime.jsonl",
             f"{args.output_dir}/opencode_reasoning.jsonl",
             f"{args.output_dir}/fenrir_cybersecurity.jsonl",
             f"{args.output_dir}/vulnerability_detection.jsonl",
