@@ -84,6 +84,13 @@ DOC_SOURCES = [
 
 def clone_repo(url: str, dest: str) -> bool:
     """Clone a git repo using gitpython"""
+    import shutil
+    
+    # Clean up existing directory if present
+    dest_path = Path(dest)
+    if dest_path.exists():
+        shutil.rmtree(dest_path)
+    
     try:
         Repo.clone_from(url, dest, depth=1)
         return Path(dest).exists()
@@ -429,7 +436,7 @@ def merge_datasets(input_files: list, output_path: str):
 def main():
     parser = argparse.ArgumentParser(description="Build custom CTF/coding datasets")
     parser.add_argument("--source", choices=["writeups", "docs", "all", "merge"], required=True)
-    parser.add_argument("--output-dir", default="data")
+    parser.add_argument("--output-dir", default="data/raw")
     parser.add_argument("--max-per-repo", type=int, default=500)
     parser.add_argument("--max-per-doc", type=int, default=200)
     args = parser.parse_args()
