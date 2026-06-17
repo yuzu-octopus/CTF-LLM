@@ -21,6 +21,12 @@ except ImportError:
     HAS_DATASETS = False
     print("Warning: 'datasets' library not installed. HuggingFace datasets will be skipped.")
 
+try:
+    from tqdm import tqdm
+    HAS_TQDM = True
+except ImportError:
+    HAS_TQDM = False
+
 
 # GitHub repos to scrape for CTF writeups
 CTF_WRITEUP_REPOS = [
@@ -43,20 +49,20 @@ CTF_WRITEUP_REPOS = [
     {"url": "https://github.com/ffffffff0x/1earn", "name": "0x1earn", "category": "multi"},
 ]
 
-# Documentation repos/files to scrape
+# Documentation repos/files to scrape (fixed URLs)
 DOC_SOURCES = [
     # pwntools
     {"type": "github_docs", "url": "https://github.com/Gallopsled/pwntools", "path": "docs", "name": "pwntools-docs"},
     {"type": "github_file", "url": "https://raw.githubusercontent.com/Gallopsled/pwntools-write-ups/master/README.md", "name": "pwntools-writeups-readme"},
     
-    # angr
-    {"type": "github_docs", "url": "https://github.com/angr/angr-doc", "path": "docs", "name": "angr-docs"},
+    # angr (fixed: using main README)
+    {"type": "github_readme", "url": "https://github.com/angr/angr", "name": "angr-main"},
     
-    # z3
-    {"type": "github_docs", "url": "https://github.com/Z3Prover/z3", "path": "doc", "name": "z3-docs"},
+    # z3 (fixed: using main README)
+    {"type": "github_readme", "url": "https://github.com/Z3Prover/z3", "name": "z3-main"},
     
-    # pwndbg
-    {"type": "github_file", "url": "https://raw.githubusercontent.com/pwndbg/pwndbg/dev/FEATURES.md", "name": "pwndbg-features"},
+    # pwndbg (fixed: using main README)
+    {"type": "github_readme", "url": "https://github.com/pwndbg/pwndbg", "name": "pwndbg-main"},
     
     # ROP gadgets
     {"type": "github_readme", "url": "https://github.com/JonathanSalwan/ROPgadget", "name": "ropgadget-readme"},
@@ -65,10 +71,9 @@ DOC_SOURCES = [
     # One gadget
     {"type": "github_readme", "url": "https://github.com/david942j/one_gadget", "name": "onegadget-readme"},
     
-    # Math/crypto libraries
-    {"type": "github_file", "url": "https://raw.githubusercontent.com/sympy/sympy/master/README.rst", "name": "sympy-readme"},
+    # Math/crypto libraries (fixed: using main READMEs)
     {"type": "github_readme", "url": "https://github.com/sympy/sympy", "name": "sympy-main"},
-    {"type": "github_readme", "url": "https://github.com/aleaxit/gmpy2", "name": "gmpy2"},
+    {"type": "github_readme", "url": "https://github.com/pydata/gmpy2", "name": "gmpy2"},
     {"type": "github_readme", "url": "https://github.com/sagemath/sage", "name": "sagemath"},
     
     # Crypto-specific docs (raw GitHub files)
@@ -93,36 +98,74 @@ def extract_code_blocks(content: str) -> list:
     code_blocks = []
     for lang, code in matches:
         code = code.strip()
-        if len(code) > 10:  # Skip trivial blocks
+        if len(code) > 10:
             code_blocks.append({"lang": lang or "text", "code": code})
     return code_blocks
 
 
+def find_solution_boundary(content: str) -> int:
+    """Find where the solution/writeup section starts"""
+    solution_markers = [
+        r'^##\s+(?:Solution|Writeup|Exploit|Answer|Flag|Solution:)',
+        r'^###\s+(?:Solution|Writeup|Exploit|Answer|Flag|Solution:)',
+        r'^##\s+(?:Solving|Solved|My Solution)',
+        r'^###\s+(?:Solving|Solved|My Solution)',
+        r'^\*\*(?:Solution|Exploit|Answer|Flag)\*\*',
+        r'^>\s*(?:Solution|Exploit|Answer|Flag)',
+    ]
+    
+    lines = content.split('\n')
+    for i, line in enumerate(lines):
+        for marker in solution_markers:
+            if re.match(marker, line, re.IGNORECASE | re.MULTILINE):
+                return i
+    return len(lines)
+
+
 def extract_challenge_description(content: str) -> str:
-    """Extract challenge description from writeup markdown"""
-    # Remove code blocks for description extraction
-    cleaned = re.sub(r'```.*?```', '', content, flags=re.DOTALL)
-    # Remove excessive whitespace
+    """Extract challenge description from writeup markdown (before solution)"""
+    lines = content.split('\n')
+    boundary = find_solution_boundary(content)
+    
+    description_lines = lines[:boundary]
+    description = '\n'.join(description_lines)
+    
+    cleaned = re.sub(r'```.*?```', '', description, flags=re.DOTALL)
     cleaned = re.sub(r'\n{3,}', '\n\n', cleaned)
     cleaned = cleaned.strip()
-    # Take first ~1500 chars as description
-    if len(cleaned) > 1500:
-        cleaned = cleaned[:1500] + "..."
+    
+    if len(cleaned) > 2000:
+        cleaned = cleaned[:2000] + "..."
     return cleaned
 
 
-def extract_writeups_from_repo(repo_path: str, category: str) -> list:
-    """Extract writeups from a cloned repo (markdown + code)"""
+def extract_solution_text(content: str) -> str:
+    """Extract solution text from writeup markdown (after challenge description)"""
+    lines = content.split('\n')
+    boundary = find_solution_boundary(content)
+    
+    if boundary >= len(lines):
+        return ""
+    
+    solution_lines = lines[boundary:]
+    solution = '\n'.join(solution_lines)
+    solution = re.sub(r'\n{3,}', '\n\n', solution)
+    solution = solution.strip()
+    
+    if len(solution) > 3000:
+        solution = solution[:3000] + "..."
+    return solution
+
+
+def extract_writeups_from_repo(repo_path: str, category: str, repo_name: str) -> list:
+    """Extract writeups from a cloned repo as proper Q&A pairs"""
     examples = []
     repo_path = Path(repo_path)
     
-    # Find all markdown files, but skip root READMEs (usually just indexes)
     md_files = []
     for md_file in repo_path.rglob("*.md"):
-        # Skip root-level READMEs that are just indexes
         if md_file.parent == repo_path and md_file.name.lower() == "readme.md":
             continue
-        # Skip very shallow READMEs (likely indexes)
         if md_file.name.lower() == "readme.md" and len(md_file.parts) - len(repo_path.parts) <= 1:
             continue
         md_files.append(md_file)
@@ -133,30 +176,23 @@ def extract_writeups_from_repo(repo_path: str, category: str) -> list:
             continue
         md_files.append(md_file)
     
-    # Instruction templates based on content type
-    INSTRUCTION_TEMPLATES = [
-        "Analyze this binary for vulnerabilities and provide an exploit",
-        "Explain this CTF challenge and solve it step by step",
-        "What is the vulnerability in this code? Write an exploit.",
-        "Reverse engineer this challenge and find the flag",
-        "Analyze the cryptography used and break the encryption",
-        "Write a solution script for this challenge",
-        "Identify the security flaw and demonstrate exploitation",
-    ]
+    md_files = list(set(md_files))
     
-    for md_file in md_files:
+    total_files = len(md_files)
+    extracted = 0
+    
+    for idx, md_file in enumerate(md_files):
         try:
             content = md_file.read_text(errors='ignore')
-            if len(content) < 100:  # Skip very short files
+            if len(content) < 100:
                 continue
             
-            # Extract code blocks from markdown
+            challenge_name = md_file.stem.replace("-", " ").replace("_", " ").title()
             code_blocks = extract_code_blocks(content)
             
-            # Also try to find associated code files
             parent = md_file.parent
             code_files = list(parent.glob("*.py")) + list(parent.glob("*.c")) + list(parent.glob("*.sh"))
-            for cf in code_files[:3]:  # Max 3 code files
+            for cf in code_files[:3]:
                 try:
                     code_content = cf.read_text(errors='ignore')
                     if len(code_content) > 10:
@@ -164,45 +200,48 @@ def extract_writeups_from_repo(repo_path: str, category: str) -> list:
                 except:
                     pass
             
-            # Extract challenge name from filename or path
-            challenge_name = md_file.stem.replace("-", " ").replace("_", " ").title()
-            
-            # Extract challenge description (text without code)
             description = extract_challenge_description(content)
+            solution_text = extract_solution_text(content)
             
-            # Build output from code blocks
-            if code_blocks:
-                output_parts = [f"## Challenge: {challenge_name}\n"]
-                output_parts.append(f"Category: {category}\n")
-                output_parts.append(f"### Description\n{description}\n")
-                output_parts.append("### Solution\n")
-                for i, block in enumerate(code_blocks[:3]):  # Max 3 blocks
+            if not description or len(description) < 50:
+                continue
+            
+            has_code = len(code_blocks) > 0
+            
+            if has_code:
+                instruction = "Write an exploit/solution for this challenge"
+                input_text = f"Challenge: {challenge_name}\nCategory: {category}\n\n{description}"
+                
+                solution_parts = []
+                if solution_text:
+                    solution_parts.append(solution_text)
+                for block in code_blocks[:3]:
                     lang = block["lang"]
                     code = block["code"][:2000]
-                    output_parts.append(f"```{lang}\n{code}\n```\n")
-                output_text = "\n".join(output_parts)
+                    solution_parts.append(f"```{lang}\n{code}\n```")
+                output_text = "\n\n".join(solution_parts)
             else:
-                # No code found - create summary-based output
-                output_text = f"## Challenge: {challenge_name}\nCategory: {category}\n\n{description}\n"
+                instruction = "Explain how to solve this challenge step by step"
+                input_text = f"Challenge: {challenge_name}\nCategory: {category}\n\n{description}"
+                
+                if solution_text:
+                    output_text = solution_text
+                else:
+                    output_text = f"## Solution for {challenge_name}\n\n{description}"
             
-            # Select instruction based on content hints
-            lower_content = content.lower()
-            if any(kw in lower_content for kw in ["binary", "pwn", "buffer overflow", "heap", "stack"]):
-                instruction = "Analyze this binary for vulnerabilities and provide an exploit"
-            elif any(kw in lower_content for kw in ["crypto", "rsa", "aes", "encrypt", "decrypt"]):
-                instruction = "Analyze the cryptography used and break the encryption"
-            elif any(kw in lower_content for kw in ["reverse", "flag", "hidden", "obfuscated"]):
-                instruction = "Reverse engineer this challenge and find the flag"
-            elif code_blocks:
-                instruction = "Write a solution script for this challenge"
-            else:
-                instruction = "Explain this CTF challenge and solve it step by step"
+            if output_text and len(output_text) > 50:
+                examples.append({
+                    "instruction": instruction,
+                    "input": input_text,
+                    "output": output_text
+                })
+                extracted += 1
             
-            examples.append({
-                "instruction": instruction,
-                "input": f"Challenge: {challenge_name}\nCategory: {category}\n\n{description}",
-                "output": output_text
-            })
+            if HAS_TQDM:
+                pass
+            elif (idx + 1) % 10 == 0 or idx + 1 == total_files:
+                print(f"    [{idx + 1}/{total_files}] files processed, {extracted} extracted so far", flush=True)
+                
         except Exception as e:
             continue
     
@@ -218,7 +257,6 @@ def extract_from_huggingface(dataset_name: str, max_samples: int = 5000) -> list
         return examples
     
     try:
-        # Try train split first, then test, then any available
         try:
             ds = load_dataset(dataset_name, split="train")
         except Exception:
@@ -231,15 +269,13 @@ def extract_from_huggingface(dataset_name: str, max_samples: int = 5000) -> list
             if i >= max_samples:
                 break
             
-            # Try common field names
             question = item.get("question", item.get("problem", item.get("description", "")))
             answer = item.get("answer", item.get("solution", item.get("flag", "")))
             category = item.get("category", item.get("type", ""))
             
-            # Handle CTFtime format (text_chunk)
             text_chunk = item.get("text_chunk", "")
             if text_chunk and not question:
-                question = f"Explain this CTF writeup and provide the solution:"
+                question = "Explain this CTF writeup and provide the solution"
                 answer = text_chunk
             
             if question and answer:
@@ -266,14 +302,12 @@ def scrape_documentation(url: str, name: str) -> list:
         if len(content) < 100:
             return examples
         
-        # Split into sections (heuristic: look for ## headers)
         sections = re.split(r'\n(?=## )', content)
         
         for section in sections:
             if len(section) < 50:
                 continue
             
-            # Extract section title
             title_match = re.match(r'##\s+(.+)', section)
             title = title_match.group(1) if title_match else "Documentation"
             
@@ -294,20 +328,20 @@ def build_writeups_dataset(output_path: str, max_per_repo: int = 500):
     
     print("=== Building CTF Writeups Dataset ===\n")
     
-    with tempfile.TemporaryDirectory() as tmpdir:
-        for repo in CTF_WRITEUP_REPOS:
-            print(f"Cloning {repo['name']}...")
-            repo_path = f"{tmpdir}/{repo['name']}"
-            
-            if clone_repo(repo["url"], repo_path):
-                examples = extract_writeups_from_repo(repo_path, repo["category"])
-                examples = examples[:max_per_repo]  # Limit per repo
-                all_examples.extend(examples)
-                print(f"  Extracted {len(examples)} examples")
-            else:
-                print(f"  Skipped (clone failed)")
+    total_repos = len(CTF_WRITEUP_REPOS)
+    for repo_idx, repo in enumerate(CTF_WRITEUP_REPOS):
+        print(f"[{repo_idx + 1}/{total_repos}] Cloning {repo['name']}...")
+        repo_path = f"{tempfile.gettempdir()}/{repo['name']}"
+        
+        if clone_repo(repo["url"], repo_path):
+            print(f"  Extracting writeups from {repo['name']}...")
+            examples = extract_writeups_from_repo(repo_path, repo["category"], repo['name'])
+            examples = examples[:max_per_repo]
+            all_examples.extend(examples)
+            print(f"  Extracted {len(examples)} examples")
+        else:
+            print(f"  Skipped (clone failed)")
     
-    # Also add HuggingFace datasets
     print("\nLoading HuggingFace datasets...")
     hf_datasets = [
         ("kyleavery/picoctf", 500),
@@ -320,7 +354,6 @@ def build_writeups_dataset(output_path: str, max_per_repo: int = 500):
         all_examples.extend(examples)
         print(f"  Extracted {len(examples)} examples")
     
-    # Write output
     Path(output_path).parent.mkdir(exist_ok=True)
     with open(output_path, "w") as f:
         for item in all_examples:
@@ -336,14 +369,13 @@ def build_docs_dataset(output_path: str, max_per_doc: int = 200):
     
     print("=== Building Documentation Dataset ===\n")
     
-    for doc in DOC_SOURCES:
-        print(f"Scraping {doc['name']}...")
+    total_docs = len(DOC_SOURCES)
+    for doc_idx, doc in enumerate(DOC_SOURCES):
+        print(f"[{doc_idx + 1}/{total_docs}] Scraping {doc['name']}...")
         
         if doc["type"] == "github_file" or doc["type"] == "github_readme":
             examples = scrape_documentation(doc["url"], doc["name"])
         elif doc["type"] == "github_docs":
-            # For docs directories, we'd need more complex scraping
-            # For now, just get the README
             readme_url = doc["url"].replace("github.com", "raw.githubusercontent.com") + "/dev/README.md"
             examples = scrape_documentation(readme_url, doc["name"])
         else:
@@ -353,7 +385,6 @@ def build_docs_dataset(output_path: str, max_per_doc: int = 200):
         all_examples.extend(examples)
         print(f"  Extracted {len(examples)} examples")
     
-    # Write output
     Path(output_path).parent.mkdir(exist_ok=True)
     with open(output_path, "w") as f:
         for item in all_examples:
