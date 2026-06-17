@@ -205,7 +205,7 @@ def train(model_key: str, data_file: str, output_dir: str, epochs: int = 3):
 
 def main():
     parser = argparse.ArgumentParser(description="Unified CTF/Coding model fine-tuning")
-    parser.add_argument("--model", choices=["gemma4", "qwen35"], required=True,
+    parser.add_argument("--model", choices=["gemma4", "qwen35", "qwen35-4b"], required=True,
                        help="Model to fine-tune")
     parser.add_argument("--data", default="data/merged/train.jsonl",
                        help="Training data file (JSONL)")

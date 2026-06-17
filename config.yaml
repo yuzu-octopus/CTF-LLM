@@ -2,20 +2,35 @@
 # Usage: ./finetune.sh --model gemma4
 
 # Default model
-default_model: qwen35
+default_model: gemma4
 
 # Model configurations
 models:
   gemma4:
-    name: unsloth/gemma-4-12b-it
+    name: unsloth/gemma-4-E4B-it
     target_modules: all-linear
-    r: 8
-    lora_alpha: 8
+    r: 32
+    lora_alpha: 32
     max_seq_length: 4096
     batch_size: 1
-    
+
   qwen35:
     name: unsloth/Qwen3.5-9B
+    target_modules:
+      - q_proj
+      - k_proj
+      - v_proj
+      - o_proj
+      - gate_proj
+      - up_proj
+      - down_proj
+    r: 16
+    lora_alpha: 16
+    max_seq_length: 4096
+    batch_size: 1
+
+  qwen35-4b:
+    name: unsloth/Qwen3.5-4B
     target_modules:
       - q_proj
       - k_proj

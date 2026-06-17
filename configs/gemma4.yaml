@@ -1,10 +1,11 @@
-# Gemma 4 12B Configuration
+# Gemma 4 E4B Configuration
 # Based on official Unsloth notebook: https://colab.research.google.com/github/unslothai/notebooks/blob/main/nb/Gemma4_(E2B)-Vision.ipynb
+# E4B works on free T4 (16GB VRAM)
 model:
-  name: unsloth/gemma-4-12b-it
+  name: unsloth/gemma-4-E4B-it
   target_modules: all-linear
-  r: 8
-  lora_alpha: 8
+  r: 32
+  lora_alpha: 32
   lora_dropout: 0
   bias: none
   max_seq_length: 4096
