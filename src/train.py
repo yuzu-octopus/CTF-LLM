@@ -61,7 +61,7 @@ def train(model_key: str, data_file: str, output_dir: str, epochs: int = 3):
     step_start = time.time()
     
     # Use FastVisionModel for Gemma 4, FastLanguageModel for others
-    if "gemma" in model_key.lower() and "4" in model_key.lower():
+    if model_key == "gemma4":
         from unsloth import FastVisionModel
         model, processor = FastVisionModel.from_pretrained(
             model_name=model_config["name"],
@@ -84,20 +84,20 @@ def train(model_key: str, data_file: str, output_dir: str, epochs: int = 3):
     print("\n  [2/5] Setting up chat template...")
     from unsloth import get_chat_template
     
-    if "gemma" in model_key.lower() and "4" in model_key.lower():
+    if model_key == "gemma4":
         # Gemma 4 uses processor, not tokenizer for chat template
         processor = get_chat_template(processor, "gemma-4")
         tokenizer = processor.tokenizer
-    elif "qwen" in model_key.lower():
+    elif model_key in ("qwen35", "qwen35-4b"):
         tokenizer = get_chat_template(tokenizer, "chatml")
     else:
         tokenizer = get_chat_template(tokenizer, "chatml")
-    
+
     print(f"    ✓ Chat template configured")
-    
+
     # Step 3/5: Configure LoRA
     print("\n  [3/5] Configuring LoRA adapters...")
-    if "gemma" in model_key.lower() and "4" in model_key.lower():
+    if model_key == "gemma4":
         from unsloth import FastVisionModel
         model = FastVisionModel.get_peft_model(
             model,
