@@ -1,4 +1,5 @@
 # Gemma 4 12B Configuration
+# Based on official Unsloth notebook: https://colab.research.google.com/github/unslothai/notebooks/blob/main/nb/Gemma4_(E2B)-Vision.ipynb
 model:
   name: unsloth/gemma-4-12b-it
   target_modules: all-linear
@@ -8,6 +9,7 @@ model:
   bias: none
   max_seq_length: 4096
   batch_size: 1
+  load_in_4bit: false  # Gemma 4 uses 16-bit LoRA, not 4-bit QLoRA
   use_gradient_checkpointing: unsloth
 
 training:

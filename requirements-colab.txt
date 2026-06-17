@@ -1,0 +1,34 @@
+# Unsloth Gemma 4 Training Requirements
+# Based on official notebook: https://colab.research.google.com/github/unslothai/notebooks/blob/main/nb/Gemma4_(E2B)-Vision.ipynb
+
+# Core dependencies (install in this order on Colab)
+sentencepiece
+protobuf
+datasets==4.3.0
+huggingface_hub>=0.34.0
+hf_transfer
+
+# Unsloth (install with --no-deps to avoid conflicts)
+unsloth_zoo
+bitsandbytes
+accelerate
+peft
+trl
+triton
+unsloth
+
+# torchao (install with --no-deps and upgrade)
+torchao>=0.16.0
+
+# Transformers (specific version for Gemma 4)
+transformers==5.5.0
+tokenizers>=0.22.0,<=0.23.0
+
+# For Gemma 4 vision/audio
+timm
+
+# Utilities
+pyyaml
+tqdm
+requests
+gitpython

@@ -1,5 +1,6 @@
 """
 Unified Fine-tuning Script for CTF/Coding Models
+Based on official Unsloth notebooks.
 Usage:
   colab run --gpu T4 src/train.py --model gemma4
   colab run --gpu T4 src/train.py --model qwen35
@@ -10,9 +11,6 @@ from pathlib import Path
 
 import torch
 import yaml
-from unsloth import FastLanguageModel
-from unsloth.chat_templates import get_chat_template
-from trl import SFTTrainer, SFTConfig
 from datasets import load_dataset
 
 
@@ -61,44 +59,75 @@ def train(model_key: str, data_file: str, output_dir: str, epochs: int = 3):
     # Step 1/5: Load model
     print("\n  [1/5] Loading model...")
     step_start = time.time()
-    model, tokenizer = FastLanguageModel.from_pretrained(
-        model_name=model_config["name"],
-        max_seq_length=model_config["max_seq_length"],
-        load_in_4bit=True,
-        dtype=None,
-    )
+    
+    # Use FastVisionModel for Gemma 4, FastLanguageModel for others
+    if "gemma" in model_key.lower() and "4" in model_key.lower():
+        from unsloth import FastVisionModel
+        model, processor = FastVisionModel.from_pretrained(
+            model_name=model_config["name"],
+            load_in_4bit=model_config.get("load_in_4bit", False),
+            use_gradient_checkpointing="unsloth",
+        )
+        tokenizer = processor.tokenizer
+    else:
+        from unsloth import FastLanguageModel
+        model, tokenizer = FastLanguageModel.from_pretrained(
+            model_name=model_config["name"],
+            max_seq_length=model_config["max_seq_length"],
+            load_in_4bit=model_config.get("load_in_4bit", True),
+            dtype=None,
+        )
+    
     print(f"    ✓ Model loaded ({time.time() - step_start:.1f}s)")
     
     # Step 2/5: Set up chat template
     print("\n  [2/5] Setting up chat template...")
-    if "gemma" in model_key.lower():
-        chat_template = "gemma_chatml"
-    elif "qwen" in model_key.lower():
-        chat_template = "chatml"
-    else:
-        chat_template = "chatml"
+    from unsloth import get_chat_template
     
-    tokenizer = get_chat_template(
-        tokenizer,
-        chat_template=chat_template,
-        mapping={"role": "from", "content": "value", "user": "human", "assistant": "gpt"},
-        map_eos_token=True,
-    )
-    print(f"    ✓ Chat template: {chat_template}")
+    if "gemma" in model_key.lower() and "4" in model_key.lower():
+        # Gemma 4 uses processor, not tokenizer for chat template
+        processor = get_chat_template(processor, "gemma-4")
+        tokenizer = processor.tokenizer
+    elif "qwen" in model_key.lower():
+        tokenizer = get_chat_template(tokenizer, "chatml")
+    else:
+        tokenizer = get_chat_template(tokenizer, "chatml")
+    
+    print(f"    ✓ Chat template configured")
     
     # Step 3/5: Configure LoRA
     print("\n  [3/5] Configuring LoRA adapters...")
-    model = FastLanguageModel.get_peft_model(
-        model,
-        r=model_config["r"],
-        target_modules=model_config["target_modules"],
-        lora_alpha=model_config["lora_alpha"],
-        lora_dropout=model_config.get("lora_dropout", 0),
-        bias=model_config.get("bias", "none"),
-        use_gradient_checkpointing=model_config.get("use_gradient_checkpointing", "unsloth"),
-        random_state=training_config.get("seed", 3407),
-        max_seq_length=model_config["max_seq_length"],
-    )
+    if "gemma" in model_key.lower() and "4" in model_key.lower():
+        from unsloth import FastVisionModel
+        model = FastVisionModel.get_peft_model(
+            model,
+            finetune_vision_layers=True,
+            finetune_language_layers=True,
+            finetune_attention_modules=True,
+            finetune_mlp_modules=True,
+            r=model_config["r"],
+            lora_alpha=model_config["lora_alpha"],
+            lora_dropout=model_config.get("lora_dropout", 0),
+            bias=model_config.get("bias", "none"),
+            random_state=training_config.get("seed", 3407),
+            use_rslora=False,
+            loftq_config=None,
+            target_modules=model_config.get("target_modules", "all-linear"),
+        )
+    else:
+        from unsloth import FastLanguageModel
+        model = FastLanguageModel.get_peft_model(
+            model,
+            r=model_config["r"],
+            target_modules=model_config["target_modules"],
+            lora_alpha=model_config["lora_alpha"],
+            lora_dropout=model_config.get("lora_dropout", 0),
+            bias=model_config.get("bias", "none"),
+            use_gradient_checkpointing=model_config.get("use_gradient_checkpointing", "unsloth"),
+            random_state=training_config.get("seed", 3407),
+            max_seq_length=model_config["max_seq_length"],
+        )
+    
     print(f"    ✓ LoRA configured (r={model_config['r']})")
     
     # Step 4/5: Load and format dataset
@@ -115,6 +144,8 @@ def train(model_key: str, data_file: str, output_dir: str, epochs: int = 3):
     
     # Step 5/5: Train
     print("\n  [5/5] Training...")
+    from trl import SFTTrainer, SFTConfig
+    
     trainer = SFTTrainer(
         model=model,
         train_dataset=dataset,
@@ -134,6 +165,7 @@ def train(model_key: str, data_file: str, output_dir: str, epochs: int = 3):
             fp16=not torch.cuda.is_bf16_supported(),
             bf16=torch.cuda.is_bf16_supported(),
             dataset_text_field="text",
+            report_to="none",
         ),
     )
     
