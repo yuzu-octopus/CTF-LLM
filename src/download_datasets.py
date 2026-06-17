@@ -4,18 +4,30 @@ Downloads and converts datasets to Alpaca format for Unsloth training
 """
 import json
 import argparse
+import time
 from pathlib import Path
 from datasets import load_dataset
+
+try:
+    from tqdm import tqdm
+    HAS_TQDM = True
+except ImportError:
+    HAS_TQDM = False
 
 
 def download_ctf_webserver(output_path="data/ctf_webserver.jsonl"):
     """Download Jacqkues/ctf_webserver_v0.1 (web CTF challenges)"""
-    print("Downloading ctf_webserver_v0.1...")
+    print("\n  [1/5] Downloading ctf_webserver_v0.1...")
+    start_time = time.time()
     ds = load_dataset("Jacqkues/ctf_webserver_v0.1", split="train")
     
+    count = 0
+    data_iter = ds
+    if HAS_TQDM:
+        data_iter = tqdm(ds, desc="    ctf_webserver", unit="row")
+    
     with open(output_path, "w") as f:
-        for item in ds:
-            # Convert conversation format to Alpaca
+        for item in data_iter:
             messages = item.get("messages", [])
             if len(messages) >= 2:
                 instruction = messages[0].get("content", "")
@@ -25,43 +37,55 @@ def download_ctf_webserver(output_path="data/ctf_webserver.jsonl"):
                     "input": "",
                     "output": output
                 }) + "\n")
+                count += 1
     
-    print(f"Saved {len(ds)} examples to {output_path}")
+    elapsed = time.time() - start_time
+    print(f"  ✓ ctf_webserver: {count} examples ({elapsed:.1f}s)")
     return output_path
 
 
 def download_ctftime(output_path="data/ctftime.jsonl", max_samples=5000):
     """Download justinwangx/CTFtime (CTF writeups)"""
-    print("Downloading CTFtime writeups...")
+    print("\n  [2/5] Downloading CTFtime writeups...")
+    start_time = time.time()
     ds = load_dataset("justinwangx/CTFtime", split="train")
     
     count = 0
+    data_iter = ds
+    if HAS_TQDM:
+        data_iter = tqdm(ds, total=min(len(ds), max_samples), desc="    ctftime", unit="row")
+    
     with open(output_path, "w") as f:
-        for item in ds:
+        for item in data_iter:
             if count >= max_samples:
                 break
             text = item.get("text_chunk", "")
-            if len(text) > 100:  # Skip very short entries
-                # Create instruction from writeup
+            if len(text) > 100:
                 f.write(json.dumps({
                     "instruction": "Explain this CTF challenge solution and provide the exploit code:",
-                    "input": text[:2000],  # Truncate long writeups
+                    "input": text[:2000],
                     "output": "See the analysis above."
                 }) + "\n")
                 count += 1
     
-    print(f"Saved {count} examples to {output_path}")
+    elapsed = time.time() - start_time
+    print(f"  ✓ ctftime: {count} examples ({elapsed:.1f}s)")
     return output_path
 
 
 def download_opencode_reasoning(output_path="data/opencode_reasoning.jsonl", max_samples=10000):
     """Download nvidia/OpenCodeReasoning (competitive programming)"""
-    print("Downloading nvidia/OpenCodeReasoning...")
+    print("\n  [3/5] Downloading nvidia/OpenCodeReasoning...")
+    start_time = time.time()
     ds = load_dataset("nvidia/OpenCodeReasoning", split="train")
     
     count = 0
+    data_iter = ds
+    if HAS_TQDM:
+        data_iter = tqdm(ds, total=min(len(ds), max_samples), desc="    opencode-reasoning", unit="row")
+    
     with open(output_path, "w") as f:
-        for item in ds:
+        for item in data_iter:
             if count >= max_samples:
                 break
             problem = item.get("input", "")
@@ -76,18 +100,24 @@ def download_opencode_reasoning(output_path="data/opencode_reasoning.jsonl", max
                 }) + "\n")
                 count += 1
     
-    print(f"Saved {count} examples to {output_path}")
+    elapsed = time.time() - start_time
+    print(f"  ✓ opencode-reasoning: {count} examples ({elapsed:.1f}s)")
     return output_path
 
 
 def download_fenrir(output_path="data/fenrir_cybersecurity.jsonl", max_samples=10000):
     """Download AlicanKiraz0/Cybersecurity-Dataset-Fenrir-v2.1"""
-    print("Downloading Cybersecurity Dataset Fenrir v2.1...")
+    print("\n  [4/5] Downloading Cybersecurity Dataset Fenrir v2.1...")
+    start_time = time.time()
     ds = load_dataset("AlicanKiraz0/Cybersecurity-Dataset-Fenrir-v2.1", split="train")
     
     count = 0
+    data_iter = ds
+    if HAS_TQDM:
+        data_iter = tqdm(ds, total=min(len(ds), max_samples), desc="    fenrir", unit="row")
+    
     with open(output_path, "w") as f:
-        for item in ds:
+        for item in data_iter:
             if count >= max_samples:
                 break
             messages = item.get("messages", [])
@@ -102,18 +132,24 @@ def download_fenrir(output_path="data/fenrir_cybersecurity.jsonl", max_samples=1
                     }) + "\n")
                     count += 1
     
-    print(f"Saved {count} examples to {output_path}")
+    elapsed = time.time() - start_time
+    print(f"  ✓ fenrir: {count} examples ({elapsed:.1f}s)")
     return output_path
 
 
 def download_vulnerability(output_path="data/vulnerability_detection.jsonl", max_samples=10000):
     """Download ayshajavd/code-security-vulnerability-dataset"""
-    print("Downloading code-security-vulnerability-dataset...")
+    print("\n  [5/5] Downloading code-security-vulnerability-dataset...")
+    start_time = time.time()
     ds = load_dataset("ayshajavd/code-security-vulnerability-dataset", split="train")
     
     count = 0
+    data_iter = ds
+    if HAS_TQDM:
+        data_iter = tqdm(ds, total=min(len(ds), max_samples), desc="    vulnerability", unit="row")
+    
     with open(output_path, "w") as f:
-        for item in ds:
+        for item in data_iter:
             if count >= max_samples:
                 break
             code = item.get("code", "")
@@ -129,7 +165,8 @@ def download_vulnerability(output_path="data/vulnerability_detection.jsonl", max
                 }) + "\n")
                 count += 1
     
-    print(f"Saved {count} examples to {output_path}")
+    elapsed = time.time() - start_time
+    print(f"  ✓ vulnerability: {count} examples ({elapsed:.1f}s)")
     return output_path
 
 
@@ -158,7 +195,13 @@ def main():
     parser.add_argument("--output-dir", default="data")
     args = parser.parse_args()
     
+    start_time = time.time()
     Path(args.output_dir).mkdir(exist_ok=True)
+    
+    print(f"\n{'='*50}")
+    print(f"  Dataset Downloader - dataset: {args.dataset}")
+    print(f"  Max samples: {args.max_samples}")
+    print(f"{'='*50}")
     
     if args.dataset == "ctf-webserver":
         download_ctf_webserver(f"{args.output_dir}/ctf_webserver.jsonl")
@@ -177,6 +220,7 @@ def main():
         download_fenrir(f"{args.output_dir}/fenrir_cybersecurity.jsonl", args.max_samples)
         download_vulnerability(f"{args.output_dir}/vulnerability_detection.jsonl", args.max_samples)
     elif args.dataset == "merge":
+        print("\n=== Merging datasets ===")
         files = [
             f"{args.output_dir}/ctf_webserver.jsonl",
             f"{args.output_dir}/ctftime.jsonl",
@@ -186,7 +230,10 @@ def main():
         ]
         merge_datasets(files, f"{args.output_dir}/merged_train.jsonl")
     
-    print("Done!")
+    elapsed = time.time() - start_time
+    print(f"\n{'='*50}")
+    print(f"  Total time: {elapsed:.1f}s")
+    print(f"{'='*50}")
 
 
 if __name__ == "__main__":

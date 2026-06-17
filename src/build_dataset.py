@@ -8,6 +8,7 @@ Usage:
 import json
 import re
 import argparse
+import time
 from pathlib import Path
 import tempfile
 
@@ -180,8 +181,13 @@ def extract_writeups_from_repo(repo_path: str, category: str, repo_name: str) ->
     
     total_files = len(md_files)
     extracted = 0
+    start_time = time.time()
     
-    for idx, md_file in enumerate(md_files):
+    file_iter = enumerate(md_files)
+    if HAS_TQDM:
+        file_iter = tqdm(enumerate(md_files), total=total_files, desc=f"    {repo_name}", unit="file")
+    
+    for idx, md_file in file_iter:
         try:
             content = md_file.read_text(errors='ignore')
             if len(content) < 100:
@@ -237,14 +243,14 @@ def extract_writeups_from_repo(repo_path: str, category: str, repo_name: str) ->
                 })
                 extracted += 1
             
-            if HAS_TQDM:
-                pass
-            elif (idx + 1) % 10 == 0 or idx + 1 == total_files:
+            if not HAS_TQDM and ((idx + 1) % 10 == 0 or idx + 1 == total_files):
                 print(f"    [{idx + 1}/{total_files}] files processed, {extracted} extracted so far", flush=True)
                 
         except Exception as e:
             continue
     
+    elapsed = time.time() - start_time
+    print(f"    ✓ {repo_name}: {extracted} examples from {total_files} files ({elapsed:.1f}s)")
     return examples
 
 
@@ -256,6 +262,7 @@ def extract_from_huggingface(dataset_name: str, max_samples: int = 5000) -> list
         print(f"  Skipping {dataset_name} (datasets library not installed)")
         return examples
     
+    start_time = time.time()
     try:
         try:
             ds = load_dataset(dataset_name, split="train")
@@ -265,7 +272,12 @@ def extract_from_huggingface(dataset_name: str, max_samples: int = 5000) -> list
             except Exception:
                 ds = load_dataset(dataset_name)
         
-        for i, item in enumerate(ds):
+        ds_len = min(len(ds), max_samples)
+        data_iter = ds
+        if HAS_TQDM:
+            data_iter = tqdm(ds, total=ds_len, desc=f"    {dataset_name}", unit="row")
+        
+        for i, item in enumerate(data_iter):
             if i >= max_samples:
                 break
             
@@ -284,6 +296,9 @@ def extract_from_huggingface(dataset_name: str, max_samples: int = 5000) -> list
                     "input": "",
                     "output": f"Category: {category}\n\n{answer}" if category else answer
                 })
+        
+        elapsed = time.time() - start_time
+        print(f"    ✓ {dataset_name}: {len(examples)} examples ({elapsed:.1f}s)")
     except Exception as e:
         print(f"  Failed to load {dataset_name}: {e}")
     
@@ -325,12 +340,13 @@ def scrape_documentation(url: str, name: str) -> list:
 def build_writeups_dataset(output_path: str, max_per_repo: int = 500):
     """Build dataset from CTF writeup repos"""
     all_examples = []
+    start_time = time.time()
     
-    print("=== Building CTF Writeups Dataset ===\n")
+    print("\n=== Step 1/2: Building CTF Writeups Dataset ===\n")
     
     total_repos = len(CTF_WRITEUP_REPOS)
     for repo_idx, repo in enumerate(CTF_WRITEUP_REPOS):
-        print(f"[{repo_idx + 1}/{total_repos}] Cloning {repo['name']}...")
+        print(f"\n[{repo_idx + 1}/{total_repos}] Cloning {repo['name']}...")
         repo_path = f"{tempfile.gettempdir()}/{repo['name']}"
         
         if clone_repo(repo["url"], repo_path):
@@ -338,36 +354,36 @@ def build_writeups_dataset(output_path: str, max_per_repo: int = 500):
             examples = extract_writeups_from_repo(repo_path, repo["category"], repo['name'])
             examples = examples[:max_per_repo]
             all_examples.extend(examples)
-            print(f"  Extracted {len(examples)} examples")
         else:
             print(f"  Skipped (clone failed)")
     
-    print("\nLoading HuggingFace datasets...")
+    print(f"\nLoading HuggingFace datasets...")
     hf_datasets = [
         ("kyleavery/picoctf", 500),
         ("justinwangx/CTFtime", 2000),
     ]
     
     for ds_name, max_samples in hf_datasets:
-        print(f"  Loading {ds_name}...")
+        print(f"\n  Loading {ds_name}...")
         examples = extract_from_huggingface(ds_name, max_samples)
         all_examples.extend(examples)
-        print(f"  Extracted {len(examples)} examples")
     
     Path(output_path).parent.mkdir(exist_ok=True)
     with open(output_path, "w") as f:
         for item in all_examples:
             f.write(json.dumps(item) + "\n")
     
-    print(f"\n=== Total: {len(all_examples)} examples saved to {output_path} ===")
+    elapsed = time.time() - start_time
+    print(f"\n✓ Done: {len(all_examples)} examples saved to {output_path} ({elapsed:.1f}s)")
     return all_examples
 
 
 def build_docs_dataset(output_path: str, max_per_doc: int = 200):
     """Build dataset from documentation"""
     all_examples = []
+    start_time = time.time()
     
-    print("=== Building Documentation Dataset ===\n")
+    print("\n=== Step 2/2: Building Documentation Dataset ===\n")
     
     total_docs = len(DOC_SOURCES)
     for doc_idx, doc in enumerate(DOC_SOURCES):
@@ -383,14 +399,15 @@ def build_docs_dataset(output_path: str, max_per_doc: int = 200):
         
         examples = examples[:max_per_doc]
         all_examples.extend(examples)
-        print(f"  Extracted {len(examples)} examples")
+        print(f"  ✓ {len(examples)} examples extracted")
     
     Path(output_path).parent.mkdir(exist_ok=True)
     with open(output_path, "w") as f:
         for item in all_examples:
             f.write(json.dumps(item) + "\n")
     
-    print(f"\n=== Total: {len(all_examples)} examples saved to {output_path} ===")
+    elapsed = time.time() - start_time
+    print(f"\n✓ Done: {len(all_examples)} examples saved to {output_path} ({elapsed:.1f}s)")
     return all_examples
 
 
@@ -417,7 +434,12 @@ def main():
     parser.add_argument("--max-per-doc", type=int, default=200)
     args = parser.parse_args()
     
+    start_time = time.time()
     Path(args.output_dir).mkdir(exist_ok=True)
+    
+    print(f"\n{'='*50}")
+    print(f"  Dataset Builder - source: {args.source}")
+    print(f"{'='*50}")
     
     if args.source == "writeups":
         build_writeups_dataset(f"{args.output_dir}/writeups.jsonl", args.max_per_repo)
@@ -427,6 +449,7 @@ def main():
         build_writeups_dataset(f"{args.output_dir}/writeups.jsonl", args.max_per_repo)
         build_docs_dataset(f"{args.output_dir}/docs.jsonl", args.max_per_repo)
     elif args.source == "merge":
+        print("\n=== Merging datasets ===")
         files = [
             f"{args.output_dir}/writeups.jsonl",
             f"{args.output_dir}/docs.jsonl",
@@ -438,7 +461,10 @@ def main():
         ]
         merge_datasets(files, f"{args.output_dir}/merged_train.jsonl")
     
-    print("Done!")
+    elapsed = time.time() - start_time
+    print(f"\n{'='*50}")
+    print(f"  Total time: {elapsed:.1f}s")
+    print(f"{'='*50}")
 
 
 if __name__ == "__main__":

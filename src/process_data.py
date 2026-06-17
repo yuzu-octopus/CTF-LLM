@@ -6,8 +6,15 @@ Usage:
 """
 import json
 import argparse
+import time
 from pathlib import Path
 from typing import Iterator
+
+try:
+    from tqdm import tqdm
+    HAS_TQDM = True
+except ImportError:
+    HAS_TQDM = False
 
 
 SYSTEM_PROMPT_CTF = """You are an expert CTF (Capture The Flag) player and security researcher. You specialize in:
@@ -72,18 +79,21 @@ def convert_writeup_to_chat(text_chunk: str, category: str = "") -> dict:
 def process_jsonl_file(input_path: Path, output_path: Path) -> int:
     """Process a JSONL file and convert to chat format"""
     count = 0
+    total_lines = sum(1 for _ in open(input_path))
+    start_time = time.time()
     
-    with open(input_path) as fin, open(output_path, "w") as fout:
-        for line in fin:
+    line_iter = open(input_path)
+    if HAS_TQDM:
+        line_iter = tqdm(open(input_path), total=total_lines, desc=f"    {input_path.name}", unit="line")
+    
+    with open(output_path, "w") as fout:
+        for line in line_iter:
             try:
                 item = json.loads(line)
                 
-                # Handle different input formats
                 if "messages" in item:
-                    # Already in chat format
                     chat_data = item
                 elif "instruction" in item:
-                    # Alpaca format
                     chat_data = convert_alpaca_to_chat(
                         item.get("instruction", ""),
                         item.get("input", ""),
@@ -91,7 +101,6 @@ def process_jsonl_file(input_path: Path, output_path: Path) -> int:
                         item.get("category", "")
                     )
                 elif "text_chunk" in item:
-                    # Raw writeup format
                     chat_data = convert_writeup_to_chat(
                         item["text_chunk"],
                         item.get("category", "")
@@ -104,21 +113,31 @@ def process_jsonl_file(input_path: Path, output_path: Path) -> int:
             except Exception as e:
                 continue
     
+    elapsed = time.time() - start_time
+    print(f"    ✓ {input_path.name}: {count}/{total_lines} examples ({elapsed:.1f}s)")
     return count
 
 
 def process_directory(input_dir: Path, output_dir: Path) -> int:
     """Process all JSONL files in a directory"""
     total = 0
+    start_time = time.time()
     
     output_dir.mkdir(parents=True, exist_ok=True)
     
-    for input_file in input_dir.glob("*.jsonl"):
+    files = list(input_dir.glob("*.jsonl"))
+    total_files = len(files)
+    
+    print(f"\n  Found {total_files} JSONL files to process\n")
+    
+    for file_idx, input_file in enumerate(files):
+        print(f"  [{file_idx + 1}/{total_files}] Processing {input_file.name}...")
         output_file = output_dir / input_file.name
         count = process_jsonl_file(input_file, output_file)
-        print(f"  {input_file.name}: {count} examples")
         total += count
     
+    elapsed = time.time() - start_time
+    print(f"\n  ✓ Processed {total_files} files: {total} total examples ({elapsed:.1f}s)")
     return total
 
 
@@ -144,25 +163,32 @@ def main():
     parser.add_argument("--system-prompt", choices=["ctf", "coding", "auto"], default="auto")
     args = parser.parse_args()
     
+    start_time = time.time()
     input_dir = Path(args.input)
     output_dir = Path(args.output)
     
+    print(f"\n{'='*50}")
+    print(f"  Data Processor - mode: {'merge' if args.merge else 'process'}")
+    print(f"{'='*50}")
+    
     if args.merge:
-        print("=== Merging processed datasets ===")
+        print("\n=== Merging processed datasets ===")
         merged_dir = Path("data/merged")
         merged_dir.mkdir(parents=True, exist_ok=True)
         
         total = merge_jsonl_files(output_dir, merged_dir / "train.jsonl")
-        print(f"Merged {total} examples to data/merged/train.jsonl")
+        print(f"  ✓ Merged {total} examples to data/merged/train.jsonl")
     else:
-        print(f"=== Processing datasets ===")
-        print(f"Input: {input_dir}")
-        print(f"Output: {output_dir}")
+        print(f"\n=== Processing datasets ===")
+        print(f"  Input:  {input_dir}")
+        print(f"  Output: {output_dir}")
         
         total = process_directory(input_dir, output_dir)
-        print(f"\nTotal: {total} examples processed")
     
-    print("Done!")
+    elapsed = time.time() - start_time
+    print(f"\n{'='*50}")
+    print(f"  Total time: {elapsed:.1f}s")
+    print(f"{'='*50}")
 
 
 if __name__ == "__main__":

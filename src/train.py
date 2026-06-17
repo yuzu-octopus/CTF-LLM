@@ -5,6 +5,7 @@ Usage:
   colab run --gpu T4 src/train.py --model qwen35
 """
 import argparse
+import time
 from pathlib import Path
 
 import torch
@@ -48,20 +49,28 @@ def train(model_key: str, data_file: str, output_dir: str, epochs: int = 3):
     model_config = config.get("model", config)
     training_config = config.get("training", {})
     
-    print(f"=== Training {model_key.upper()} ===")
-    print(f"Model: {model_config['name']}")
-    print(f"Max seq length: {model_config['max_seq_length']}")
-    print(f"LoRA rank: {model_config['r']}")
+    total_start = time.time()
     
-    # Load model with 4-bit dynamic quantization
+    print(f"\n{'='*50}")
+    print(f"  Training {model_key.upper()}")
+    print(f"  Model: {model_config['name']}")
+    print(f"  Max seq length: {model_config['max_seq_length']}")
+    print(f"  LoRA rank: {model_config['r']}")
+    print(f"{'='*50}")
+    
+    # Step 1/5: Load model
+    print("\n  [1/5] Loading model...")
+    step_start = time.time()
     model, tokenizer = FastLanguageModel.from_pretrained(
         model_name=model_config["name"],
         max_seq_length=model_config["max_seq_length"],
         load_in_4bit=True,
         dtype=None,
     )
+    print(f"    ✓ Model loaded ({time.time() - step_start:.1f}s)")
     
-    # Set up chat template based on model
+    # Step 2/5: Set up chat template
+    print("\n  [2/5] Setting up chat template...")
     if "gemma" in model_key.lower():
         chat_template = "gemma_chatml"
     elif "qwen" in model_key.lower():
@@ -75,8 +84,10 @@ def train(model_key: str, data_file: str, output_dir: str, epochs: int = 3):
         mapping={"role": "from", "content": "value", "user": "human", "assistant": "gpt"},
         map_eos_token=True,
     )
+    print(f"    ✓ Chat template: {chat_template}")
     
-    # Configure LoRA
+    # Step 3/5: Configure LoRA
+    print("\n  [3/5] Configuring LoRA adapters...")
     model = FastLanguageModel.get_peft_model(
         model,
         r=model_config["r"],
@@ -88,18 +99,22 @@ def train(model_key: str, data_file: str, output_dir: str, epochs: int = 3):
         random_state=training_config.get("seed", 3407),
         max_seq_length=model_config["max_seq_length"],
     )
+    print(f"    ✓ LoRA configured (r={model_config['r']})")
     
-    # Load dataset (should be in messages format)
+    # Step 4/5: Load and format dataset
+    print("\n  [4/5] Loading dataset...")
+    step_start = time.time()
     dataset = load_dataset("json", data_files={"train": data_file}, split="train")
-    print(f"Dataset size: {len(dataset)} examples")
+    print(f"    Dataset size: {len(dataset)} examples")
     
-    # Format dataset with chat template
     dataset = dataset.map(
         lambda examples: format_chat_template(examples, tokenizer),
         batched=True,
     )
+    print(f"    ✓ Dataset formatted ({time.time() - step_start:.1f}s)")
     
-    # Training config (optimized for T4)
+    # Step 5/5: Train
+    print("\n  [5/5] Training...")
     trainer = SFTTrainer(
         model=model,
         train_dataset=dataset,
@@ -118,32 +133,40 @@ def train(model_key: str, data_file: str, output_dir: str, epochs: int = 3):
             save_strategy=training_config.get("save_strategy", "epoch"),
             fp16=not torch.cuda.is_bf16_supported(),
             bf16=torch.cuda.is_bf16_supported(),
-            dataset_text_field="text",  # Use the formatted text field
+            dataset_text_field="text",
         ),
     )
     
-    # Train
-    print("Starting training...")
+    print(f"    Epochs: {epochs}, Batch: {model_config.get('batch_size', 1)}, Grad accum: {training_config.get('gradient_accumulation_steps', 4)}")
+    train_start = time.time()
     trainer.train()
+    print(f"    ✓ Training complete ({time.time() - train_start:.1f}s)")
     
-    # Save LoRA adapter
+    # Save outputs
+    print("\n=== Saving models ===")
+    
+    print("  Saving LoRA adapter...")
     lora_path = f"{output_dir}/lora"
     model.save_pretrained(lora_path)
     tokenizer.save_pretrained(lora_path)
-    print(f"LoRA adapter saved to {lora_path}")
+    print(f"    ✓ {lora_path}")
     
-    # Export to GGUF
+    print("  Exporting GGUF model...")
     gguf_path = f"{output_dir}/gguf"
     model.save_pretrained_gguf(gguf_path, tokenizer, quantization_method="q4_k_m")
-    print(f"GGUF model saved to {gguf_path}")
+    print(f"    ✓ {gguf_path}")
     
-    # Export merged 16-bit SafeTensors
+    print("  Exporting merged model...")
     merged_path = f"{output_dir}/merged"
     model.save_pretrained_merged(merged_path, tokenizer, save_method="merged_16bit")
-    print(f"Merged model saved to {merged_path}")
+    print(f"    ✓ {merged_path}")
     
-    print(f"\n=== Training complete! ===")
-    print(f"All models saved to {output_dir}/")
+    total_elapsed = time.time() - total_start
+    print(f"\n{'='*50}")
+    print(f"  ✓ Training complete!")
+    print(f"  Total time: {total_elapsed:.1f}s")
+    print(f"  Output: {output_dir}/")
+    print(f"{'='*50}")
     
     return model, tokenizer
 
@@ -161,6 +184,12 @@ def main():
     args = parser.parse_args()
     
     output_dir = args.output or f"outputs/{args.model}-ctf"
+    
+    print(f"\n{'='*50}")
+    print(f"  CTF/Coding Fine-tuning Pipeline")
+    print(f"  Model: {args.model}, Epochs: {args.epochs}")
+    print(f"  Data: {args.data}")
+    print(f"{'='*50}")
     
     train(args.model, args.data, output_dir, args.epochs)
 
