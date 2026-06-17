@@ -2,7 +2,7 @@
 # Usage: ./finetune.sh --model gemma4
 
 # Default model
-default_model: gemma4
+default_model: qwen35
 
 # Model configurations
 models:
