@@ -18,10 +18,7 @@ dependencies = [
     # Tokenizers
     "sentencepiece",
     "protobuf",
-    
-    # Experiment tracking
-    "wandb",
-    
+
     # HTTP/Networking
     "requests",
     "httpx",

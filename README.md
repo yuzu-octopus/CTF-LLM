@@ -1,6 +1,6 @@
 # Fine-tuning LLMs for CTF & Competitive Programming
 
-Fine-tune open-source LLMs (Gemma 4 12B, Qwen 3.5 9B) to excel at cybersecurity CTF challenges and competitive programming using [Unsloth](https://unsloth.ai) with QLoRA on Google Colab's free tier.
+Fine-tune open-source LLMs (Gemma 4 E4B, Qwen 3.5 9B/4B) to excel at cybersecurity CTF challenges and competitive programming using [Unsloth](https://unsloth.ai) with QLoRA on Google Colab's free tier.
 
 ## What This Does
 
@@ -74,7 +74,7 @@ Uses Unsloth's optimized QLoRA training:
 
 - **4-bit quantization**: Reduces memory usage by ~75%, enabling training on free T4 GPUs
 - **LoRA adapters**: Only trains small adapter layers (~1% of parameters)
-- **Chat templates**: Applies model-specific formatting (Gemma uses `gemma_chatml`, Qwen uses `chatml`)
+- **Chat templates**: Applies model-specific formatting (Gemma uses `gemma-4`, Qwen uses `chatml`)
 
 Training outputs three model versions:
 - `lora/` - LoRA adapter (small, for continued training)
@@ -99,8 +99,13 @@ finetuning/
 ├── finetune.sh              # Main entry point - orchestrates everything
 ├── config.yaml              # Central configuration for models and training
 ├── pyproject.toml           # uv project config and dependencies
+├── requirements.txt         # Local Python deps
+├── requirements-colab.txt   # Colab-only install set (ordered)
 ├── AGENTS.md                # Instructions for AI agents
 ├── README.md                # This file
+├── TRAINING.md              # Step-by-step training guide
+├── .mimocode/commands/      # Slash-commands for mimocode
+│   └── ft-diag.md           # /ft-diag — Colab failure mode diagnostic
 │
 ├── src/                     # Python scripts
 │   ├── train.py             # Unified training script (reads configs/*.yaml)
@@ -108,14 +113,20 @@ finetuning/
 │   ├── download_datasets.py # Downloads HuggingFace datasets
 │   └── process_data.py      # Converts data to chat format
 │
-├── configs/                 # Model-specific configurations
-│   ├── gemma4.yaml          # Gemma 4 12B settings
-│   └── qwen35.yaml          # Qwen 3.5 9B settings
+├── configs/                 # Model-specific configurations (3 total)
+│   ├── gemma4.yaml          # Gemma 4 E4B settings
+│   ├── qwen35.yaml          # Qwen 3.5 9B settings
+│   └── qwen35-4b.yaml       # Qwen 3.5 4B settings
+│
+├── notebooks/
+│   └── qwen4b_self_contained.ipynb  # ONLY notebook (full pipeline)
 │
 └── data/                    # Training data (gitignored)
-    ├── raw/                 # Scraped/downloaded raw data
+    ├── writeups.jsonl       # GitHub writeup scrape (data/ root)
+    ├── docs.jsonl           # GitHub docs scrape (data/ root)
+    ├── raw/                 # HuggingFace downloads
     ├── processed/           # Converted to chat format
-    └── merged/              # Final merged training file
+    └── merged/              # Final merged training file (train.jsonl)
 ```
 
 ## Configuration
@@ -129,9 +140,9 @@ default_model: gemma4
 
 models:
   gemma4:
-    name: unsloth/gemma-4-12b-it
-    r: 8                    # LoRA rank
-    lora_alpha: 8           # LoRA scaling
+    name: unsloth/gemma-4-E4B-it
+    r: 32                    # LoRA rank
+    lora_alpha: 32           # LoRA scaling
     max_seq_length: 4096    # Max token length (limited by T4 VRAM)
     batch_size: 1           # Batch size (limited by T4 VRAM)
     
@@ -148,10 +159,10 @@ Individual model configurations that override main config:
 ```yaml
 # configs/gemma4.yaml
 model:
-  name: unsloth/gemma-4-12b-it
+  name: unsloth/gemma-4-E4B-it
   target_modules: all-linear  # Apply LoRA to all linear layers
-  r: 8
-  lora_alpha: 8
+  r: 32
+  lora_alpha: 32
 ```
 
 ## Adding a New Model
