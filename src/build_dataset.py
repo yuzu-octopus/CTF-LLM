@@ -73,7 +73,7 @@ DOC_SOURCES = [
     
     # Math/crypto libraries (fixed: using main READMEs)
     {"type": "github_readme", "url": "https://github.com/sympy/sympy", "name": "sympy-main"},
-    {"type": "github_readme", "url": "https://github.com/pydata/gmpy2", "name": "gmpy2"},
+    {"type": "github_readme", "url": "https://github.com/gmpy2/gmpy2", "name": "gmpy2"},
     {"type": "github_readme", "url": "https://github.com/sagemath/sage", "name": "sagemath"},
     
     # Crypto-specific docs (raw GitHub files)
