@@ -1,58 +1,84 @@
 # Finetuning Configuration
-# Usage: ./finetune.sh --model gemma4
+# Usage: ./finetune.sh gemma4 --all
 
 # Default model
 default_model: gemma4
 
-# Model configurations
+# Model configurations (mirror configs/*.yaml structure so fallback works)
 models:
   gemma4:
-    name: unsloth/gemma-4-E4B-it
-    target_modules: all-linear
-    r: 32
-    lora_alpha: 32
-    max_seq_length: 4096
-    batch_size: 1
+    model:
+      name: unsloth/gemma-4-E4B-it
+      target_modules: all-linear
+      r: 32
+      lora_alpha: 32
+      lora_dropout: 0
+      bias: none
+      max_seq_length: 4096
+      batch_size: 1
+      load_in_4bit: false
+      use_gradient_checkpointing: unsloth
+    training:
+      num_train_epochs: 3
+      learning_rate: 2e-4
+      warmup_steps: 10
+      gradient_accumulation_steps: 4
+      optim: adamw_8bit
+      seed: 3407
 
   qwen35:
-    name: unsloth/Qwen3.5-9B
-    target_modules:
-      - q_proj
-      - k_proj
-      - v_proj
-      - o_proj
-      - gate_proj
-      - up_proj
-      - down_proj
-    r: 16
-    lora_alpha: 16
-    max_seq_length: 4096
-    batch_size: 1
+    model:
+      name: unsloth/Qwen3.5-9B
+      target_modules:
+        - q_proj
+        - k_proj
+        - v_proj
+        - o_proj
+        - gate_proj
+        - up_proj
+        - down_proj
+      r: 16
+      lora_alpha: 16
+      lora_dropout: 0
+      bias: none
+      max_seq_length: 4096
+      batch_size: 1
+      load_in_4bit: true
+      use_gradient_checkpointing: unsloth
+    training:
+      num_train_epochs: 3
+      learning_rate: 2e-4
+      warmup_steps: 10
+      gradient_accumulation_steps: 4
+      optim: adamw_8bit
+      seed: 3407
 
   qwen35-4b:
-    name: unsloth/Qwen3.5-4B
-    target_modules:
-      - q_proj
-      - k_proj
-      - v_proj
-      - o_proj
-      - gate_proj
-      - up_proj
-      - down_proj
-    r: 16
-    lora_alpha: 16
-    max_seq_length: 4096
-    batch_size: 1
-
-# Training hyperparameters
-training:
-  num_train_epochs: 3
-  learning_rate: 2e-4
-  warmup_steps: 10
-  gradient_accumulation_steps: 4
-  optim: adamw_8bit
-  seed: 3407
-  save_strategy: epoch
+    model:
+      name: unsloth/Qwen3.5-4B
+      target_modules:
+        - q_proj
+        - k_proj
+        - v_proj
+        - o_proj
+        - gate_proj
+        - up_proj
+        - down_proj
+      r: 16
+      lora_alpha: 16
+      lora_dropout: 0
+      bias: none
+      max_seq_length: 4096
+      batch_size: 1
+      load_in_4bit: true
+      use_gradient_checkpointing: unsloth
+    training:
+      num_train_epochs: 3
+      learning_rate: 2e-4
+      warmup_steps: 10
+      gradient_accumulation_steps: 4
+      optim: adamw_8bit
+      seed: 3407
 
 # Data configuration
 data:

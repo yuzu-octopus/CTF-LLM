@@ -1,11 +1,16 @@
 #!/bin/bash
 # Main entry point for fine-tuning
-# Usage: ./finetune.sh [gemma4|qwen35] [--build-data] [--train] [--all]
+# Usage: ./finetune.sh [gemma4|qwen35|qwen35-4b] [--build-data] [--train] [--all]
 
-set -e
+set -euo pipefail
 
-MODEL=${1:-gemma4}
-ACTION=${2:---all}
+if [[ "${1:-}" == --* ]]; then
+  MODEL=${DEFAULT_MODEL:-gemma4}
+  ACTION=$1
+else
+  MODEL=${1:-gemma4}
+  ACTION=${2:---all}
+fi
 SESSION_NAME="finetune-${MODEL}"
 
 echo "=== LLM Fine-tuning Pipeline ==="
@@ -33,14 +38,15 @@ if [[ "$ACTION" == "--train" ]] || [[ "$ACTION" == "--all" ]]; then
 
     echo ""
     echo "[4/5] Installing dependencies..."
-    colab install -s "$SESSION_NAME" -r requirements.txt
+    colab install -s "$SESSION_NAME" -r requirements-colab.txt
 
     echo ""
     echo "[5/5] Uploading and training..."
-    colab upload -s "$SESSION_NAME" data/merged/ /content/data/merged/
-    colab upload -s "$SESSION_NAME" src/ /content/src/
-    colab upload -s "$SESSION_NAME" configs/ /content/configs/
-    colab upload -s "$SESSION_NAME" config.yaml /content/config.yaml
+    colab exec -s "$SESSION_NAME" "mkdir -p /content/data/merged /content/src /content/configs"
+    colab upload -s "$SESSION_NAME" data/merged/train.jsonl /content/data/merged/train.jsonl
+    colab upload -s "$SESSION_NAME" configs/gemma4.yaml /content/configs/gemma4.yaml
+    colab upload -s "$SESSION_NAME" configs/qwen35.yaml /content/configs/qwen35.yaml
+    colab upload -s "$SESSION_NAME" configs/qwen35-4b.yaml /content/configs/qwen35-4b.yaml
     colab exec -s "$SESSION_NAME" -f src/train.py --model "$MODEL"
 
     echo ""

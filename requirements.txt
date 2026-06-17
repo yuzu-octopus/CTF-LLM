@@ -15,18 +15,11 @@ bitsandbytes
 sentencepiece
 protobuf
 
-# Experiment tracking
-wandb
-
 # HTTP/Networking
 requests
-httpx
 
 # Git operations
 gitpython
-
-# HuggingFace Hub
-huggingface-hub
 
 # Utilities
 pyyaml
