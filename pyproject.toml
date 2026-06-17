@@ -21,14 +21,10 @@ dependencies = [
 
     # HTTP/Networking
     "requests",
-    "httpx",
-    
+
     # Git operations
     "gitpython",
-    
-    # HuggingFace Hub
-    "huggingface-hub",
-    
+
     # Utilities
     "pyyaml",
     "tqdm",

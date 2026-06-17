@@ -84,7 +84,7 @@ pulls in conflicting default versions of `torchao` and `transformers`. Use this
 ordered install (mirrors `requirements-colab.txt`):
 
 ```bash
-colab exec -s finetune-<model> "pip install -q sentencepiece protobuf datasets huggingface_hub hf_transfer && pip install --no-deps unsloth_zoo bitsandbytes accelerate xformers peft trl triton unsloth && pip install --no-deps --upgrade 'torchao>=0.16.0' && pip install --no-deps transformers==4.55.0 'tokenizers>=0.22.0,<=0.23.0'"
+colab exec -s finetune-<model> "pip install -q sentencepiece protobuf datasets huggingface_hub hf_transfer && pip install --no-deps unsloth_zoo bitsandbytes accelerate xformers peft trl triton unsloth && pip install --no-deps --upgrade 'torchao>=0.16.0' && pip install --no-deps transformers==5.5.0 'tokenizers>=0.22.0,<=0.23.0'"
 ```
 
 ### Step 5: Run Training (Notebook — Preferred)
