@@ -1,22 +1,45 @@
-# Data (large files)
+# Data and datasets (large, regenerable)
 data/raw/
 data/processed/
 data/merged/
 *.jsonl
+*.parquet
 
-# Outputs
+# Model outputs (large, regenerable)
 outputs/
 *.pt
 *.bin
 *.safetensors
+*.gguf
+*.ckpt
 
 # Python
 __pycache__/
 *.pyc
-.env
-venv/
+*.pyo
+*.pyd
 .venv/
+venv/
+env/
 
-# OS
+# Secrets and environment
+.env
+.env.local
+
+# OS and editor
 .DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Tooling caches
 .playwright-mcp/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Build artifacts
+*.egg-info/
+build/
+dist/
