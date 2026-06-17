@@ -66,9 +66,13 @@ DOC_SOURCES = [
     {"type": "github_readme", "url": "https://github.com/david942j/one_gadget", "name": "onegadget-readme"},
     
     # Math/crypto libraries
-    {"type": "github_docs", "url": "https://github.com/sympy/sympy", "path": "docs", "name": "sympy-docs"},
-    {"type": "github_readme", "url": "https://github.com/aleaxit/gmpy2", "name": "gmpy2-readme"},
-    {"type": "github_docs", "url": "https://github.com/sagemath/sage", "path": "doc", "name": "sagemath-docs"},
+    {"type": "github_file", "url": "https://raw.githubusercontent.com/sympy/sympy/master/README.rst", "name": "sympy-readme"},
+    {"type": "github_readme", "url": "https://github.com/sympy/sympy", "name": "sympy-main"},
+    {"type": "github_readme", "url": "https://github.com/aleaxit/gmpy2", "name": "gmpy2"},
+    {"type": "github_readme", "url": "https://github.com/sagemath/sage", "name": "sagemath"},
+    
+    # Crypto-specific docs (raw GitHub files)
+    {"type": "github_file", "url": "https://raw.githubusercontent.com/sympy/sympy/master/sympy/crypto/crypto.py", "name": "sympy-crypto-module"},
 ]
 
 
@@ -112,8 +116,22 @@ def extract_writeups_from_repo(repo_path: str, category: str) -> list:
     examples = []
     repo_path = Path(repo_path)
     
-    # Find all markdown files
-    md_files = list(repo_path.rglob("*.md")) + list(repo_path.rglob("*.MD"))
+    # Find all markdown files, but skip root READMEs (usually just indexes)
+    md_files = []
+    for md_file in repo_path.rglob("*.md"):
+        # Skip root-level READMEs that are just indexes
+        if md_file.parent == repo_path and md_file.name.lower() == "readme.md":
+            continue
+        # Skip very shallow READMEs (likely indexes)
+        if md_file.name.lower() == "readme.md" and len(md_file.parts) - len(repo_path.parts) <= 1:
+            continue
+        md_files.append(md_file)
+    for md_file in repo_path.rglob("*.MD"):
+        if md_file.parent == repo_path and md_file.name.lower() == "readme.md":
+            continue
+        if md_file.name.lower() == "readme.md" and len(md_file.parts) - len(repo_path.parts) <= 1:
+            continue
+        md_files.append(md_file)
     
     # Instruction templates based on content type
     INSTRUCTION_TEMPLATES = [
@@ -200,7 +218,14 @@ def extract_from_huggingface(dataset_name: str, max_samples: int = 5000) -> list
         return examples
     
     try:
-        ds = load_dataset(dataset_name, split="train")
+        # Try train split first, then test, then any available
+        try:
+            ds = load_dataset(dataset_name, split="train")
+        except Exception:
+            try:
+                ds = load_dataset(dataset_name, split="test")
+            except Exception:
+                ds = load_dataset(dataset_name)
         
         for i, item in enumerate(ds):
             if i >= max_samples:
@@ -210,6 +235,12 @@ def extract_from_huggingface(dataset_name: str, max_samples: int = 5000) -> list
             question = item.get("question", item.get("problem", item.get("description", "")))
             answer = item.get("answer", item.get("solution", item.get("flag", "")))
             category = item.get("category", item.get("type", ""))
+            
+            # Handle CTFtime format (text_chunk)
+            text_chunk = item.get("text_chunk", "")
+            if text_chunk and not question:
+                question = f"Explain this CTF writeup and provide the solution:"
+                answer = text_chunk
             
             if question and answer:
                 examples.append({
