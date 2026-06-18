@@ -65,6 +65,67 @@ grep -c '"output": ""' data/merged/train.jsonl  # should be 0
 - **Notebook approach for training**, not `colab exec` — long-running training (model load + 3 epochs) hits Colab session timeout
 - **Distill-first policy** — check existing skills/commands before creating new ones
 
+## Dataset: Fast vs Full Mode
+
+The notebook supports two training modes with different dataset sizes:
+
+| Parameter | Fast (~30 min) | Full (~50-70 min) |
+|-----------|----------------|-------------------|
+| MAX_PER_REPO | 30 | 999999 (no limit) |
+| MAX_HF_SAMPLES | 200 | 999999 (no limit) |
+| MAX_DOC_SECTIONS | 5 | 999999 (no limit) |
+| MAX_OUTPUT_LEN | 2000 chars | 20000 chars (safety cap) |
+| MAX_SEQ_LENGTH | 2048 | 4096 |
+| LORA_R | 8 | 16 |
+| NUM_EPOCHS | 1 | 2 |
+
+Set `MODE = "fast"` or `MODE = "full"` in notebook Section 2.0.
+
+### Synthetic rev/pwn examples
+
+`src/synthetic_rev_pwn.py` contains 23 hand-crafted training examples:
+- **13 pwn**: ret2win, ret2libc, format string, heap UAF, stack canary bypass, ROP chain, ret2dlresolve, fastbin attack, heap consolidation, shellcode injection, ASLR bypass, ret2csu, read→shellcode ROP
+- **10 rev**: binary analysis workflow, XOR cipher, anti-debugging, ELF sections, packing detection, crypto identification, keygen, Frida tracing, LD_PRELOAD hooking, deobfuscation
+
+These use chain-of-thought reasoning (step-by-step analysis before solution), not just answers.
+
+To regenerate synthetic data:
+```bash
+uv run python -c "from src.synthetic_rev_pwn import save_to_file; save_to_file('data/raw/synthetic_rev_pwn.jsonl')"
+```
+
+### Build command (Full mode)
+
+```bash
+uv run src/build_dataset.py --source all --output-dir data/raw --max-per-repo 999999
+uv run src/process_data.py --input data/raw --output data/processed
+uv run src/process_data.py --merge --input data/processed --output data/merged
+```
+
+### Writeup repos (13 total)
+
+| Repo | Category | Max | Purpose |
+|------|----------|-----|---------|
+| Cajac/picoCTF-Writeups | picoctf | per-repo | picoCTF solutions |
+| vivian-dai/PicoCTF2021-Writeup | picoctf | per-repo | picoCTF 2021 |
+| DarkCodeOrg/CryptoHack | cryptohack | per-repo | Crypto challenges |
+| AyushSingh-c/Cryptohack | cryptohack | per-repo | Crypto challenges |
+| Adamkadaban/CTFs | multi | per-repo | Multi-category (rev/pwn/crypto) |
+| Cryptogenic/Exploit-Writeups | pwn | per-repo | Pwn writeups |
+| ffffffff0x/1earn | multi | per-repo | Multi-category |
+| mohitmishra786/reversingBits | rev | 200 | RE cheatsheets |
+| x86byte/RE-MA-Roadmap | rev | 150 | RE roadmap |
+| Crypto-Cat/CTF | pwn | 200 | Pwn challenges (2500★) |
+| Bretley/how2exploit_binary | pwn | 100 | Pwn tutorial |
+| (pwncollege repos) | pwncollege | per-repo | 3 repos, extract 0 (non-standard markdown) |
+
+### Data quality notes
+
+- Category field is now preserved in extracted examples (critical for system prompt selection)
+- Extraction uses MAX_OUTPUT_LEN instead of hardcoded 3000/2000/8000 truncation
+- Length filtering at training time (notebook Section 7.4) drops examples > max_seq_length tokens
+- The `is_ctf_content()` classifier in process_data.py checks the category field
+
 ## Known Gotchas
 
 - **YAML `2e-4` parses as string** with PyYAML — cast to `float()` in code

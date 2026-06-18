@@ -47,9 +47,36 @@ Also downloads structured datasets from HuggingFace:
 | Dataset | Size | Content |
 |---------|------|---------|
 | `nvidia/OpenCodeReasoning` | 735K samples | Competitive programming with reasoning traces |
-| `justinwangx/CTFtime` | 18K writeups | Real CTF competition solutions |
 | `AlicanKiraz0/Cybersecurity-Dataset-Fenrir-v2.1` | 99.8K examples | Cybersecurity Q&A |
-| `ayshajavd/code-security-vulnerability-dataset` | 175K examples | Vulnerability detection |
+| `Jacqkues/ctf_webserver_v0.1` | 340 samples | Web CTF challenges |
+| `kyleavery/picoctf` | 120 samples | picoCTF challenge solutions |
+
+### 1.5 Synthetic Rev/PWN Examples (`src/synthetic_rev_pwn.py`)
+
+23 hand-crafted training examples covering the hardest CTF categories:
+
+| Category | Examples | Techniques Covered |
+|----------|----------|-------------------|
+| **PWN** (13) | ret2win, ret2libc, format string, heap UAF, stack canary bypass, ROP chain, ret2dlresolve, fastbin attack, heap consolidation, shellcode injection, ASLR bypass, ret2csu, read→shellcode ROP | Chain-of-thought reasoning before exploit code |
+| **REV** (10) | binary analysis workflow, XOR cipher, anti-debugging, ELF sections, packing detection, crypto identification, keygen, Frida tracing, LD_PRELOAD hooking, deobfuscation | Step-by-step methodology, not just answers |
+
+These examples use chain-of-thought reasoning: the model learns to analyze before solving, not just jump to the answer.
+
+### 1.6 Training Modes (Fast vs Full)
+
+The notebook supports two training modes with different dataset sizes:
+
+| Parameter | Fast (~30 min) | Full (~50-70 min) |
+|-----------|----------------|-------------------|
+| MAX_PER_REPO | 30 | no limit |
+| MAX_HF_SAMPLES | 200 | no limit |
+| MAX_DOC_SECTIONS | 5 | no limit |
+| MAX_OUTPUT_LEN | 2000 chars | 20000 chars |
+| MAX_SEQ_LENGTH | 2048 | 4096 |
+| LORA_R | 8 | 16 |
+| NUM_EPOCHS | 1 | 2 |
+
+Set `MODE = "fast"` or `MODE = "full"` in notebook Section 2.0.
 
 ### 2. Data Processing (`src/process_data.py`)
 
@@ -177,7 +204,8 @@ model:
 |-----------|-------------|
 | GPU | NVIDIA T4 (16GB) - free on Colab |
 | VRAM | ~12GB used with QLoRA |
-| Training time | ~1-2 hours for 5K examples |
+| Training time (Fast) | ~30 min for ~500 examples |
+| Training time (Full) | ~50-70 min for ~2500+ examples |
 | Storage | ~2GB for data, ~4GB for model |
 
 ## Export Formats
