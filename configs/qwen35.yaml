@@ -11,7 +11,7 @@ model:
     - up_proj
     - down_proj
   r: 16
-  lora_alpha: 16
+  lora_alpha: 32
   lora_dropout: 0
   bias: none
   max_seq_length: 4096
