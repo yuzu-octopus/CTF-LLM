@@ -15,6 +15,34 @@ except ImportError:
     HAS_TQDM = False
 
 
+def load_hf_with_fallback(name):
+    """Try train split, then test, then default."""
+    for split in ["train", "test"]:
+        try:
+            return load_dataset(name, split=split)
+        except Exception:
+            continue
+    return load_dataset(name)
+
+
+def extract_qa(item):
+    """Extract question/answer from various HF dataset schemas."""
+    msgs = item.get("messages")
+    if msgs and len(msgs) >= 2:
+        q = msgs[0].get("content", "")
+        a = msgs[-1].get("content", "")
+        if q and a:
+            return q, a
+    q = item.get("question") or item.get("problem") or item.get("description") or ""
+    a = item.get("answer") or item.get("solution") or item.get("flag") or ""
+    if q and a:
+        return q, a
+    text = item.get("text_chunk", "")
+    if text:
+        return "Explain this CTF writeup and provide the solution", text
+    return None, None
+
+
 def download_ctf_webserver(output_path="data/ctf_webserver.jsonl"):
     """Download Jacqkues/ctf_webserver_v0.1 (web CTF challenges)"""
     print("\n  [1/5] Downloading ctf_webserver_v0.1...")

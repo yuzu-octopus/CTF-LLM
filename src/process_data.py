@@ -8,7 +8,7 @@ import json
 import argparse
 import time
 from pathlib import Path
-from typing import Iterator
+
 
 try:
     from tqdm import tqdm
@@ -43,6 +43,14 @@ When solving problems:
 4. Explain your reasoning"""
 
 
+CTF_KEYWORDS = ["pwn", "rev", "web", "crypto", "ctf", "exploit", "vuln", "shellcode"]
+
+
+def is_ctf_content(text):
+    """Check if text contains CTF-related keywords."""
+    return any(k in text.lower() for k in CTF_KEYWORDS)
+
+
 def convert_alpaca_to_chat(instruction: str, input_text: str, output: str, category: str = "", system_prompt_mode: str = "auto") -> dict:
     """Convert Alpaca format to chat format"""
     # Determine system prompt based on mode
@@ -52,7 +60,7 @@ def convert_alpaca_to_chat(instruction: str, input_text: str, output: str, categ
         system_prompt = SYSTEM_PROMPT_CODING
     else:
         # auto: detect from category
-        if any(kw in category.lower() for kw in ["pwn", "rev", "web", "crypto", "ctf", "exploit"]):
+        if is_ctf_content(category):
             system_prompt = SYSTEM_PROMPT_CTF
         else:
             system_prompt = SYSTEM_PROMPT_CODING
