@@ -260,7 +260,7 @@ cells = [
           "\n",
           "trainer = SFTTrainer(\n",
           "    model=model,\n",
-          "    tokenizer=tokenizer,\n",
+          "    processing_class=tokenizer,\n",
           "    train_dataset=train_dataset,\n",
           "    eval_dataset=eval_dataset,\n",
           "    args=SFTConfig(\n",

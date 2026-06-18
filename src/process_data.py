@@ -55,8 +55,21 @@ def is_ctf_content(text):
     return any(k in text.lower() for k in CTF_KEYWORDS)
 
 
-def convert_alpaca_to_chat(instruction: str, input_text: str, output: str, category: str = "", system_prompt_mode: str = "auto") -> dict:
+def convert_alpaca_to_chat(instruction: str, input_text: str, output: str, category: str = "", system_prompt_mode: str = "auto", skip_system_prompt: bool = False) -> dict:
     """Convert Alpaca format to chat format"""
+    # Build user message
+    user_content = instruction
+    if input_text:
+        user_content += f"\n\n{input_text}"
+
+    if skip_system_prompt:
+        return {
+            "messages": [
+                {"role": "user", "content": user_content},
+                {"role": "assistant", "content": output}
+            ]
+        }
+
     # Determine system prompt based on mode
     if system_prompt_mode == "ctf":
         system_prompt = SYSTEM_PROMPT_CTF
@@ -69,11 +82,6 @@ def convert_alpaca_to_chat(instruction: str, input_text: str, output: str, categ
         else:
             system_prompt = SYSTEM_PROMPT_CODING
 
-    # Build user message
-    user_content = instruction
-    if input_text:
-        user_content += f"\n\n{input_text}"
-
     return {
         "messages": [
             {"role": "system", "content": system_prompt},
@@ -83,7 +91,7 @@ def convert_alpaca_to_chat(instruction: str, input_text: str, output: str, categ
     }
 
 
-def process_jsonl_file(input_path: Path, output_path: Path, system_prompt_mode: str = "auto") -> int:
+def process_jsonl_file(input_path: Path, output_path: Path, system_prompt_mode: str = "auto", skip_system_prompt: bool = False) -> int:
     """Process a JSONL file and convert to chat format"""
     count = 0
     with open(input_path) as f:
@@ -108,6 +116,7 @@ def process_jsonl_file(input_path: Path, output_path: Path, system_prompt_mode: 
                             item.get("output", ""),
                             item.get("category", ""),
                             system_prompt_mode=system_prompt_mode,
+                            skip_system_prompt=skip_system_prompt,
                         )
                     else:
                         continue
@@ -122,7 +131,7 @@ def process_jsonl_file(input_path: Path, output_path: Path, system_prompt_mode: 
     return count
 
 
-def process_directory(input_dir: Path, output_dir: Path, system_prompt_mode: str = "auto") -> int:
+def process_directory(input_dir: Path, output_dir: Path, system_prompt_mode: str = "auto", skip_system_prompt: bool = False) -> int:
     """Process all JSONL files in a directory"""
     total = 0
     start_time = time.time()
@@ -137,7 +146,7 @@ def process_directory(input_dir: Path, output_dir: Path, system_prompt_mode: str
     for file_idx, input_file in enumerate(files):
         print(f"  [{file_idx + 1}/{total_files}] Processing {input_file.name}...")
         output_file = output_dir / input_file.name
-        count = process_jsonl_file(input_file, output_file, system_prompt_mode=system_prompt_mode)
+        count = process_jsonl_file(input_file, output_file, system_prompt_mode=system_prompt_mode, skip_system_prompt=skip_system_prompt)
         total += count
 
     elapsed = time.time() - start_time
@@ -165,6 +174,7 @@ def main():
     parser.add_argument("--output", default="data/processed", help="Output directory")
     parser.add_argument("--merge", action="store_true", help="Merge processed files")
     parser.add_argument("--system-prompt", choices=["ctf", "coding", "auto"], default="auto")
+    parser.add_argument("--skip-system-prompt", action="store_true", help="Omit system prompt from output messages (system prompt set at training time via chat_template)")
     args = parser.parse_args()
     
     start_time = time.time()
@@ -187,8 +197,10 @@ def main():
         print(f"  Input:  {input_dir}")
         print(f"  Output: {output_dir}")
         print(f"  System prompt mode: {args.system_prompt}")
+        if args.skip_system_prompt:
+            print(f"  System prompts: SKIPPED (set at training time)")
 
-        total = process_directory(input_dir, output_dir, system_prompt_mode=args.system_prompt)
+        total = process_directory(input_dir, output_dir, system_prompt_mode=args.system_prompt, skip_system_prompt=args.skip_system_prompt)
     
     elapsed = time.time() - start_time
     print(f"\n{'='*50}")

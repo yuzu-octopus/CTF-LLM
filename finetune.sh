@@ -25,7 +25,11 @@ if [[ "$ACTION" == "--build-data" ]] || [[ "$ACTION" == "--all" ]]; then
     uv run src/download_datasets.py --dataset all --max-samples 5000
 
     echo ""
-    echo "[2/5] Processing to chat format..."
+    echo "[2/5] Generating synthetic rev/pwn examples..."
+    uv run python -c "from src.synthetic_rev_pwn import save_to_file; save_to_file('data/raw/synthetic_rev_pwn.jsonl')"
+
+    echo ""
+    echo "[3/5] Processing to chat format..."
     uv run src/process_data.py --input data/raw --output data/processed
     uv run src/process_data.py --merge --input data/processed --output data/merged
 fi

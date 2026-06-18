@@ -136,39 +136,6 @@ def download_fenrir(output_path="data/fenrir_cybersecurity.jsonl", max_samples=1
     return output_path
 
 
-def download_vulnerability(output_path="data/vulnerability_detection.jsonl", max_samples=10000):
-    """Download ayshajavd/code-security-vulnerability-dataset"""
-    print("\n  [4/4] Downloading code-security-vulnerability-dataset...")
-    start_time = time.time()
-    ds = load_dataset("ayshajavd/code-security-vulnerability-dataset", split="train")
-    
-    count = 0
-    data_iter = ds
-    if HAS_TQDM:
-        data_iter = tqdm(ds, total=min(len(ds), max_samples), desc="    vulnerability", unit="row")
-    
-    with open(output_path, "w") as f:
-        for item in data_iter:
-            if count >= max_samples:
-                break
-            code = item.get("code", "")
-            vulnerability = item.get("vulnerability", "")
-            fix = item.get("fix", "")
-            cwe = item.get("cwe", "")
-            
-            if code and vulnerability:
-                f.write(json.dumps({
-                    "instruction": f"Identify and fix the security vulnerability in this code (CWE: {cwe}):",
-                    "input": code[:2000],
-                    "output": f"Vulnerability: {vulnerability}\n\nFixed code:\n{fix}"
-                }) + "\n")
-                count += 1
-    
-    elapsed = time.time() - start_time
-    print(f"  ✓ vulnerability: {count} examples ({elapsed:.1f}s)")
-    return output_path
-
-
 def download_ctf_solver(output_path="data/raw/ctf_solver.jsonl", max_samples=10000):
     """Download TrueNix/ctf-solver-dataset (CTF solver with solutions)"""
     print("\n  [NEW] Downloading ctf-solver-dataset...")
@@ -331,8 +298,6 @@ def main():
         download_opencode_reasoning(f"{args.output_dir}/opencode_reasoning.jsonl", args.max_samples)
     elif args.dataset == "fenrir":
         download_fenrir(f"{args.output_dir}/fenrir_cybersecurity.jsonl", args.max_samples)
-    elif args.dataset == "vulnerability":
-        download_vulnerability(f"{args.output_dir}/vulnerability_detection.jsonl", args.max_samples)
     elif args.dataset == "all":
         download_ctf_webserver(f"{args.output_dir}/ctf_webserver.jsonl")
         download_opencode_reasoning(f"{args.output_dir}/opencode_reasoning.jsonl", args.max_samples)

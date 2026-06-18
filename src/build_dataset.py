@@ -364,25 +364,43 @@ def scrape_documentation(url: str, name: str) -> list:
 
 def build_writeups_dataset(output_path: str, max_per_repo: int = 500):
     """Build dataset from CTF writeup repos"""
+    import concurrent.futures
+
     all_examples = []
     start_time = time.time()
     
     print("\n=== Step 1/2: Building CTF Writeups Dataset ===\n")
     
     total_repos = len(CTF_WRITEUP_REPOS)
-    for repo_idx, repo in enumerate(CTF_WRITEUP_REPOS):
-        print(f"\n[{repo_idx + 1}/{total_repos}] Cloning {repo['name']}...")
-        repo_path = f"{tempfile.gettempdir()}/{repo['name']}"
 
-        if clone_repo(repo["url"], repo_path):
-            print(f"  Extracting writeups from {repo['name']}...")
+    # Phase 1: Clone all repos in parallel
+    print(f"Cloning {total_repos} repos in parallel...")
+    clone_results = {}
+
+    def clone_one(repo):
+        repo_path = f"{tempfile.gettempdir()}/{repo['name']}"
+        return repo, clone_repo(repo['url'], repo_path), repo_path
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
+        futures = {pool.submit(clone_one, repo): repo for repo in CTF_WRITEUP_REPOS}
+        for future in concurrent.futures.as_completed(futures):
+            repo, success, repo_path = future.result()
+            clone_results[repo['name']] = (success, repo_path)
+            status = "✓" if success else "✗"
+            print(f"  {status} {repo['name']}")
+
+    # Phase 2: Extract from cloned repos sequentially (CPU-bound I/O)
+    for repo_idx, repo in enumerate(CTF_WRITEUP_REPOS):
+        success, repo_path = clone_results[repo['name']]
+        if success:
+            print(f"\n[{repo_idx + 1}/{total_repos}] Extracting from {repo['name']}...")
             examples = extract_writeups_from_repo(repo_path, repo["category"], repo['name'])
             examples = dedup_examples(examples)
             repo_max = repo.get("max_per_repo", max_per_repo)
             examples = examples[:repo_max]
             all_examples.extend(examples)
         else:
-            print(f"  Skipped (clone failed)")
+            print(f"\n[{repo_idx + 1}/{total_repos}] Skipped {repo['name']} (clone failed)")
     
     print(f"\nLoading HuggingFace datasets...")
     hf_datasets = [

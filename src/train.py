@@ -163,6 +163,7 @@ def train(model_key: str, data_file: str, output_dir: str, epochs: int = 3):
             bf16=torch.cuda.is_bf16_supported(),
             dataset_text_field="text",
             report_to="none",
+            packing=True,
         ),
     )
     
