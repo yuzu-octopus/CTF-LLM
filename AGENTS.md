@@ -78,10 +78,11 @@ The notebook supports two training modes with different dataset sizes:
 | MAX_DOC_SECTIONS | 5 | 999999 (no limit) |
 | MAX_OUTPUT_LEN | 2000 chars | 20000 chars (safety cap) |
 | MAX_SEQ_LENGTH | 2048 | 4096 |
-| LORA_R | 8 | 16 |
+| LORA_R | 8 | 32 |
+| LORA_ALPHA | 16 | 64 |
 | NUM_EPOCHS | 1 | 2 |
 
-Set `MODE = "fast"` or `MODE = "full"` in notebook Section 2.0.
+Set `MODE = "fast"` or `MODE = "quality"` in notebook Section 2.0.
 
 ### Synthetic rev/pwn examples
 

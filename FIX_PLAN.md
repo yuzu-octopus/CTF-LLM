@@ -1,56 +1,92 @@
-# FIX_PLAN.md — Iteration toward "monster" Qwen 3.5 9B CTF fine-tune on T4
+# FIX_PLAN.md — All audit findings consolidated (post-thorough-audit pass)
 
-> **Goal**: produce a high-quality CTF / cybersecurity / competitive-programming fine-tune of Qwen 3.5 9B with Unsloth + QLoRA on a single 16GB T4.
+> **Goal**: fine-tune **Qwen 3.5 9B** for CTF / cybersecurity / competitive-programming with **Unsloth + QLoRA on a single 16GB T4**.
 >
 > **Scope of this document**: actionable next steps for another agent to execute. Two paths:
-> - **Small path** (~30 LoC) — unblock the current pipeline cleanly. Recommended first.
-> - **Large path** (~150 LoC) — quality lift on top of small path.
+> - **Small path** — code fixes only, ~60 LoC. Unblocks Colab runs.
+> - **Cleanup path** — doc drift only, ~10 edits. Cosmetic accuracy.
 >
-> **Decision log**: abliteration is **explicitly rejected** (rationale below).
+> **Decision log**: abliteration **rejected** (rationale below).
 
 ---
 
-## State of the codebase (verified)
+## TL;DR — what's still wrong (verified)
 
-### Already landed (commit `400e1b8` + prior)
+| ID | Severity | Real bug? | Where | Fix LoC |
+|---|---|---|---|---|
+| **A** | 🔴 CRITICAL | yes | `src/train.py:161,167`; notebook cell [24] | ~5 |
+| **B** | 🟡 HIGH | yes | `scripts/generate_notebook.py` (cell-10 builder) | ~30 |
+| **C** | 🟡 MED | yes | notebook cell [5] (`LORA_R=16`) vs `configs/qwen35.yaml` (`r=32`) | ~3 |
+| **H** | 🟡 MED | yes | notebook `CTF_WRITEUP_REPOS` (10) vs `src/build_dataset.py` (13) | ~6 |
+| **J** | 🟡 HIGH | yes | `src/train.py` (no length filter; notebook cell [22] has one) | ~15 |
+| D | LOW | doc only | `README.md` Fast/Full table | ~3 |
+| E | LOW | doc only | `TRAINING.md` Training Config table | ~3 |
+| F | LOW | doc only | `README.md` removed `kyleavery/picoctf` reference | ~2 |
+| G | LOW | doc only | `README.md` + `AGENTS.md` duplicate Fast/Full table | ~3 |
+| I | LOW | doc only | `src/process_data.py` argparse help wording | ~1 |
+| K | — | **not a bug** | `_build_curated_subset` open mode is `"w"` (safe overwrite) | 0 |
+
+**Total small path**: ~60 LoC of real bug fixes.
+**Total cleanup path**: ~12 doc edits.
+**Combined**: ~75 LoC + 1 Colab validation run.
+
+---
+
+## State of the codebase (verified post-audit)
+
+### Already landed (commit `400e1b8`, `2db5033`, `b3acd41`, `0de74fa` + prior)
 | Item | Where | Status |
 |---|---|---|
-| `assistant_only_loss=True` on SFTTrainer | `src/train.py:161`, notebook cell [24] | ✅ |
-| `processing_class=tokenizer` | `src/train.py:150`, notebook cell [24] | ✅ |
-| `packing=True` | `src/train.py:167`, notebook cell [24] | ⚠️ see OPEN #1 — potential ValueError in vanilla `trl>=0.12` |
-| Eval split + `load_best_model_at_end=True` | `src/train.py`, notebook cell [22] | ✅ |
-| `save_total_limit: 1` in all configs | `configs/*.yaml` | ✅ |
-| Cell [22] length filter uses `apply_chat_template(ex["messages"])` | notebook cell [22] | ✅ **Fix A** |
-| Cell [18] inlines `SYSTEM_CTF`/`SYSTEM_CODING`/`is_ctf_content` | notebook cell [18] | ✅ **Fix B** |
-| `ThreadPoolExecutor(4)` + `ProcessPoolExecutor(8)` in build_dataset | `src/build_dataset.py:380-415` | ✅ (source only — see OPEN #2) |
-| `--no-system-prompt` flag + AGENTS.md docs | `src/process_data.py`, `AGENTS.md` | ✅ |
-| `tests/test_process_data.py` + `tests/test_loss_masking.py` | `tests/` | ✅ |
-| Synthetic `synthetic_rev_pwn.jsonl` auto-merged | `finetune.sh` | ✅ |
+| `assistant_only_loss=True` + `processing_class=tokenizer` | `src/train.py:150,161`; notebook cell [24] | ✅ shipped |
+| `packing=True` | `src/train.py:167`; notebook cell [24] | ⚠️ collides with above — see Bug A |
+| `eval_strategy="steps"`, `load_best_model_at_end=True`, `metric_for_best_model="eval_loss"`, `save_total_limit=1` | both surfaces | ✅ shipped |
+| Cell [22] length filter uses `apply_chat_template(ex["messages"])`, handles Qwen3VLProcessor wrap | notebook | ✅ shipped (Fix A) |
+| Cell [18] inlines `SYSTEM_CTF`/`SYSTEM_CODING`/`CTF_KEYWORDS`/`is_ctf_content` | notebook | ✅ shipped (Fix B) |
+| Cell [9]+[10] parallel clone + `extract_writeup` defined inline | notebook | ✅ shipped (Fix C) |
+| Configs bumped: r=32 alpha=64 grad_accum=8 for Qwen 9B | `configs/qwen35.yaml`, `config.yaml` | ✅ shipped (OPEN #3, #4 closed) |
+| CTF-Dojo pipeline (`build_ctfdojo_dataset`) | `src/build_dataset.py`, `finetune.sh`, AGENTS.md | ✅ shipped (OPEN #5 closed) |
+| Two-stage SFT (`train_two_stage` + `_build_curated_subset`) | `src/train.py`, `finetune.sh` `TWO_STAGE=true`, AGENTS.md | ✅ shipped (OPEN #6 closed) |
+| `tests/test_process_data.py` + `tests/test_loss_masking.py` | `tests/`, pyproject.toml dev dep | ✅ shipped |
+| Synthetic `synthetic_rev_pwn.jsonl` auto-merged | `finetune.sh` | ✅ shipped |
+| `--no-system-prompt` flag + docs | `src/process_data.py`, AGENTS.md | ✅ shipped |
 
-### Still open (this plan)
-1. `packing=True + assistant_only_loss=True` collision — **CRITICAL**
-2. Notebook cell [10] reverted to sequential cloning — **MEDIUM (Fix C leftover)**
-3. LoRA config not bumped for 9B quality runs — **HIGH**
-4. Gradient accumulation not tuned for 9B — **HIGH**
-5. CTF-Dojo data not in pipeline — **MEDIUM**
-6. Two-stage SFT recipe not codified — **MEDIUM**
+### Previously-OPEN items — closed by your recent batch
+| OPEN # | Was | Status now |
+|---|---|---|
+| 1 (`packing`/`assistant_only_loss`) | unresolved | **still active, see Bug A** |
+| 2 (cell [10] parallel) | unfixed | ✅ **closed** (cell [9] inlines `extract_writeup`; cell [10] now uses it) |
+| 3 (LoRA r=32 for 9B) | unfixed | ✅ closed (`configs/qwen35.yaml` `r=32`) |
+| 4 (grad_accum=8 for 9B) | unfixed | ✅ closed (`configs/qwen35.yaml` `grad_accumulation_steps: 8`) |
+| 5 (CTF-Dojo pipeline) | unfixed | ✅ closed (`b3acd41`) |
+| 6 (Two-stage SFT) | unfixed | ✅ closed (`2db5033`) |
 
 ---
 
-# Small path — unblock current Colab runs (~30 LoC)
+# Small path — unblock current Colab runs (~60 LoC)
 
-## OPEN #1 — Resolve `packing=True` + `assistant_only_loss=True` conflict ⚠️ CRITICAL
+> Execute in the listed order. Bug B and Bug J don't need Colab to validate; only Bug A does.
+
+## Bug A — resolve `packing=True` + `assistant_only_loss=True` conflict 🔴 CRITICAL
 
 **Where**
-- `src/train.py:161, 167` (both args present)
-- `notebooks/qwen4b_self_contained.ipynb` cell [24] (both args present)
-- `scripts/generate_notebook.py` cell-24 block (regenerates the cell)
+- `src/train.py` line 161 (`assistant_only_loss=True`)
+- `src/train.py` line 167 (`packing=True`)
+- `notebooks/qwen4b_self_contained.ipynb` cell [24] (both args present in `SFTConfig(...)` block)
+- `scripts/generate_notebook.py` cell-24 builder (regenerates from `H[24]["source"]`)
 
 **Problem**
-`trl>=0.12` `SFTTrainer.__init__` validates this combo and **raises `ValueError`** in vanilla TRL. Unsloth's monkey patching sometimes overrides the guard in newer versions, but not always.
+
+`trl>=0.12` SFTTrainer validates this combo and **raises `ValueError("assistant_only_loss is not supported with packing=True")`** in vanilla TRL. Unsloth's monkey-patches sometimes override the guard in newer versions, but not always — depends on installed `trl`, `peft`, `transformers`, `unsloth` combo.
+
+**Why it's the highest-leverage fix**
+
+`assistant_only_loss=True` is the only thing preventing the model from wasting 30–50% of every gradient step on the system prompt and user question (per TRL docs and Unsloth practitioner consensus). `packing=True` saves 2–3× wall time on T4 but on ~1.5k examples the absolute saving is ~15–20 min. Trading packing for correctness is the right call.
 
 **Action**
-Before any other fix, run this on Colab to learn the truth:
+
+Two-step on Colab:
+
+**Step 1 — diagnose truth** (single 1-cell Colab notebook test, ~10s):
 
 ```python
 import trl, peft, transformers, unsloth
@@ -60,48 +96,75 @@ print(f"transformers={transformers.__version__}")
 print(f"unsloth={unsloth.__version__}")
 ```
 
-Then **decide**:
+**Step 2 — branch on the result**
 
 | Result | Decision | Edit |
 |---|---|---|
-| Cell [24] runs and starts training | Both work (Unsloth patched). Keep both. | None |
-| Cell [24] raises `ValueError` mentioning `assistant_only_loss` + `packing` | TRL guard active. **Drop `packing=True`** to keep assistant-targeted loss. | `src/train.py:167`: delete the `packing=True` line. In `scripts/generate_notebook.py` cell-24 construction, remove the `packing=True` line and its comment. Re-run `python3 scripts/generate_notebook.py` to regenerate. |
+| Cell [24] runs and begins training | Both work (Unsloth patched). Keep both. | None |
+| Cell [24] raises `ValueError` with `assistant_only_loss` in message | TRL guard active. **Drop `packing=True`** in three places. | `src/train.py:167` delete the `packing=True` line; in `scripts/generate_notebook.py` cell-24 block remove `packing=True` (and the `# Speed: pack short samples...` comment); regenerate notebook via `python3 scripts/generate_notebook.py` |
 
-**Why drop `packing`, not `assistant_only_loss`**:
-- `assistant_only_loss=True` is the only thing that prevents the model from wasting gradient on the system prompt + user question (~30-50% of every step otherwise).
-- `packing=True` saves 2-3× wall time but on T4 with ~1.5k examples the absolute saving is ~15-20 min. Worth trading for actual correctness.
+**Why drop `packing`, not `assistant_only_loss`**: loss-masking correctness > 15 min wall-time saving.
 
-**Verification (small path)**
+**Verification**
+
 ```python
-# In a Colab cell after training completes:
+# After training completes in cell [25]:
 import json
 train_log = json.load(open("/content/outputs/trainer_state.json"))
 print("Final step:", train_log["global_step"])
-print("Has loss history:", len(train_log["log_history"]) > 0)
-print("Did NOT see ValueError on cell [24].")  # manual
+print("Loss history length:", len(train_log["log_history"]))
+# Expected: global_step > 0, no ValueError during cell [24]
 ```
 
 ---
 
-## OPEN #2 — Parallelize notebook cell [10] (Fix C leftover)
+## Bug B — `scripts/generate_notebook.py` emits cell [10] calling undefined `extract_writeup` 🟡 HIGH
 
-**Where**: `notebooks/qwen4b_self_contained.ipynb` cell [10] (regenerated from `H[10]["source"]` in `scripts/generate_notebook.py` line 117).
+**Where**: `scripts/generate_notebook.py` cell-10 builder block (`# Cell 10: Parallel clone + extract`). Around lines 75–95.
 
-**Problem**: Cell [10] is the loop `for repo in tqdm(CTF_WRITEUP_REPOS, desc="Cloning repos"): clone_repo; extract_writeup`. Sequential. ~6 min wasted per run.
+**Problem**
 
-**Action** — replace `scripts/generate_notebook.py` line 117 region (the `code(H[10]["source"])` block) with an inlined version that mirrors the `src/build_dataset.py:build_writeups_dataset` parallel pipeline. Two ways:
+The actual notebook works because somebody manually inlined `extract_writeup()` into cell [9] of the .ipynb. **The generator does not emit that cell-9 definition**. So:
 
-**Option A (preferred — keep self-contained)**: in-place hardcoded call to the parallel functions defined in cell [8].
+- ✅ Current `notebooks/qwen4b_self_contained.ipynb` — works (cell [9] is there manually)
+- ❌ Re-running `python3 scripts/generate_notebook.py` — emits a notebook where cell [10] calls `extract_writeup(...)` → `NameError` at cell 10 execution
 
-Replace the entire cell-10 construction in `scripts/generate_notebook.py`:
+This is a regression introduced when the user hand-edited cell [10] for parallelization but didn't teach the generator to emit the matching `extract_writeup` definition.
+
+**Action**
+
+Two options. **Recommended: extract `extract_writeup` into the `src_funcs` dict** so the generator emits both cells [9] and [10] cleanly.
+
+Edit `scripts/generate_notebook.py`:
+
+1. Add `adapt_for_notebook(extract_function("build_dataset", "extract_writeups_from_repo"))` to `src_funcs` dict (rename key to `extract_writeup` to mirror what cell [10] calls):
 
 ```python
-# Old (line 117):
-code(H[10]["source"]),
+src_funcs = {
+    "clone_repo": ...,
+    "find_solution_boundary": ...,
+    "extract_code_blocks": ...,
+    "extract_writeup": adapt_for_notebook(extract_function("build_dataset", "extract_writeups_from_repo")),
+    ...
+}
+```
 
-# New:
+2. Replace the current cell-9 + cell-10 constructions:
+
+```python
+# Cell 9 was: code(H[9]["source"])  ← BREAKS after regen
+# Cell 10 was: code([...calls extract_writeup...])
+
+# NEW Cell 9 (FROM SRC): helper function definitions
+code([
+    "# 3.3 Extract Q&A from writeups\n",
+    src_funcs["extract_writeup"] + "\n",
+    "print('Helper function: extract_writeup defined')"
+]),
+
+# NEW Cell 10 (FROM SRC): parallel clone + extract
 code([r"""# 3.4 Clone all repos in parallel + extract writeups
-import concurrent.futures, tempfile
+import concurrent.futures
 t0 = time.time()
 all_writeups = []
 all_clone_results = {}
@@ -117,303 +180,355 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
         all_clone_results[repo['name']] = (ok, path)
         print(f"  {'OK' if ok else 'FAIL'} {repo['name']}")
 
-def _extract(args):
-    from build_dataset_dup import extract_writeup  # inlined below
-    ...
+for repo_name, (ok, repo_path) in all_clone_results.items():
+    if ok:
+        repo_info = next(r for r in CTF_WRITEUP_REPOS if r['name'] == repo_name)
+        count = 0
+        md_files = [m for m in list(Path(repo_path).rglob("*.md")) + list(Path(repo_path).rglob("*.MD"))
+                   if m.name.lower() != "readme.md"]
+        for md in tqdm(md_files, desc=f"  {repo_name}", leave=False):
+            ex = extract_writeup(md, repo_info["category"])
+            if ex:
+                all_writeups.append(ex)
+                count += 1
+                if count >= repo_info.get("max_per_repo", MAX_PER_REPO):
+                    break
 
+elapsed = time.time() - t0
+print(f"\nExtracted {len(all_writeups)} writeups in {elapsed:.1f}s")
 """]),
 ```
 
-Recommended alternative (much simpler):
-
-**Option B (delegate to src)**: in `notebooks/`, the `src/` package is uploaded alongside (check `finetune.sh`). Replace cell [10] with:
+3. Done. The mac/linux `build_dataset.extract_writeups_from_repo` function takes `(repo_path, category, repo_name)` but it's a heavier extractor — for the notebook's lightweight extract_writeup, the in-cell-9 definition should mirror the actual notebook cell [9] (1 markdown file → 1 example dict). Suggested body:
 
 ```python
-code([r"""# 3.4 Clone all repos in parallel + extract (delegates to src/build_dataset.py)
-import sys, importlib
-sys.path.insert(0, "/content")
-# build_dataset.py functions are already in scope from cell 8 (clone_repo, find_solution_boundary, extract_code_blocks)
-# build_writeups_dataset runs ThreadPoolExecutor(4) + ProcessPoolExecutor(8)
-all_writeups = build_writeups_dataset(
-    f"{WORK_DIR}/data/raw/writeups.jsonl",
-    max_per_repo=MAX_PER_REPO
-)
-"""]),
+def extract_writeup(md_file, category):
+    """Convert one markdown file into a Q&A example (lightweight notebook version)."""
+    try:
+        content = md_file.read_text(errors='ignore')
+        if len(content) < 100 or md_file.name.lower() == "readme.md":
+            return None
+
+        challenge_name = md_file.stem.replace("-", " ").replace("_", " ").title()
+        boundary = find_solution_boundary(content)
+        description = re.sub(r'```.*?```', '',
+                                '\n'.join(content.split('\n')[:boundary]),
+                                flags=re.DOTALL)
+        description = re.sub(r'\n{3,}', '\n\n', description).strip()[:MAX_OUTPUT_LEN]
+        solution = re.sub(r'\n{3,}', '\n\n',
+                            '\n'.join(content.split('\n')[boundary:])).strip()[:MAX_OUTPUT_LEN]
+
+        if not description or len(description) < 50:
+            return None
+
+        code_blocks = extract_code_blocks(content)
+        for cf in list(md_file.parent.glob("*.py"))[:2] + list(md_file.parent.glob("*.c"))[:2]:
+            try:
+                code = cf.read_text(errors='ignore')
+                if len(code) > 10:
+                    code_blocks.append({"lang": cf.suffix[1:] or "text", "code": code})
+            except:
+                pass
+
+        if code_blocks:
+            output = f"## Solution\n\n{solution}\n\n" + "\n\n".join(
+                f"```{b['lang']}\n{b['code'][:MAX_OUTPUT_LEN]}\n```" for b in code_blocks[:3])
+        else:
+            output = solution or f"## Solution\n\n{description}"
+        if len(output) < 50:
+            return None
+
+        instruction = "Write an exploit/solution for this challenge" if code_blocks else "Explain how to solve this challenge step by step"
+        return {
+            "instruction": instruction,
+            "input": f"Challenge: {challenge_name}\nCategory: {category}\n\n{description}",
+            "output": output
+        }
+    except Exception:
+        return None
 ```
 
-This requires `build_writeups_dataset` to be in scope — the current cell [8] only imports `clone_repo`, `find_solution_boundary`, `extract_code_blocks` extracted from `src/build_dataset.py`. So Option A is preferred (self-contained).
-
-**Recommended: use Option A** but lift `build_writeups_dataset` itself into cell [8] (as an imported function definition, similar to how `clone_repo` is currently imported). Then cell [10] becomes a 5-line call.
-
-**Verification (small path)**
-```
-Re-run cell [10] in Colab.
-Expected: total time drops from ~15 min → ~5 min for 7 repos.
-Captured writeups count: same as before (~2500).
-No "FAIL" except for known-bad pwncollege repos.
-```
-
----
-
-# Large path — quality lift on top of small path (~150 LoC)
-
-Execute after the small path is verified working.
-
-## OPEN #3 — Bump LoRA config for 9B quality runs
-
-**Where**: `configs/qwen35.yaml`
-
-**Current**:
-```yaml
-training config:
-  r: 16
-  lora_alpha: 32
-```
-
-**Change to**:
-```yaml
-training config:
-  r: 32
-  lora_alpha: 64
-```
-
-**Rationale**: Doubled trainable LoRA params for 9B at cost ~640 MB additional VRAM (measured: 9B Qwen 3.5 with r=16 + max_seq=4096 + batch=1 ≈ 11.2 GB; r=32 + same ≈ 11.8 GB — well under 16 GB T4 ceiling).
-
-**Skip for the 4B fast mode**: `configs/qwen35-4b.yaml` should keep `r: 8, lora_alpha: 16` — diminishing returns at smaller scale.
+OR simpler: register the function body as a literal cell in the generator rather than extracting it from `src/build_dataset.py` (the notebook version is intentionally simpler than the script version; reusing the script version would over-extract and OOM).
 
 **Verification**
-```python
-# After training step 5/5 (model load + LoRA config), check VRAM:
-print(f"VRAM: {torch.cuda.memory_allocated() / 1e9:.1f} GB / 16.0 GB")
-# Expected: ~12.0 GB (still 4 GB headroom for backward pass + activations)
+
+```bash
+git restore notebooks/qwen4b_self_contained.ipynb   # discard manual edits
+python3 scripts/generate_notebook.py                  # regen from scratch
+python3 -c "import json; nb=json.load(open('notebooks/qwen4b_self_contained.ipynb')); print(len(nb['cells']),'cells')"
+# Expected: 32 cells, with cell [9] defining extract_writeup, cell [10] using it
 ```
 
 ---
 
-## OPEN #4 — Increase gradient accumulation for stable convergence
-
-**Where**: `configs/qwen35.yaml`
-
-**Current**:
-```yaml
-training config:
-  gradient_accumulation_steps: 4
-```
-
-**Change to**:
-```yaml
-training config:
-  gradient_accumulation_steps: 8
-```
-
-**Rationale**: Effective batch 8 is a friendlier loss landscape for the ~1.5k-example merged dataset. Halves optimizer steps but each step sees more data. Wall-time impact on T4: +0% (gradient accumulation is compute-equivalent for a fixed data volume).
-
-**Skip for 4B fast mode**: keep `gradient_accumulation_steps: 4` (smaller datasets prefer smaller effective batch).
-
-**Verification**: `trainer_state.json["global_step"]` should be **half** the prior run's value. Eval loss curves should show smoother convergence (fewer oscillations).
-
----
-
-## OPEN #5 — Add CTF-Dojo data pipeline
+## Bug C — `LORA_R=16` in notebook cell [5] vs `r=32` in `configs/qwen35.yaml` 🟡 MED
 
 **Where**
-- `src/build_dataset.py`: add a new `build_ctfdojo_dataset(output_path, max_samples)` function
-- `src/build_dataset.py` `main()`: add `ctfd` to the `choices=["writeups","docs","all","merge"]` enum (or add a new `--source ctfd` semantic)
-- `finetune.sh`: add a step in `--build-data` to invoke it
-- `AGENTS.md`: document the new dataset
+
+- Actual notebook cell [5]:
+  ```python
+  if "4B" in MODEL_NAME:
+      LORA_R = 8
+      LORA_ALPHA = 16      # alpha/r = 2
+  else:  # 9B
+      LORA_R = 16
+      LORA_ALPHA = 32      # alpha/r = 2
+  ```
+- `configs/qwen35.yaml`: `r: 32, lora_alpha: 64`
+
+**Problem**
+
+The notebook is the "single source of truth" training surface (per AGENTS.md: "Notebook approach for training, not `colab exec`"). But its hardcoded `LORA_R=16` for 9B contradicts the config file. If a user runs `MODE = "quality"` (the 9B path), they get r=16 even though the config says r=32. ~50% wasted LoRA capacity on the run that needed it most.
 
 **Action**
 
-1. Clone `amazon-science/CTF-Dojo` (GitHub repo, not on HF Hub). Subdirectory `SFT-data/` contains execution-grounded trajectories (~658 verified challenges with `(task, expert_trajectory, flag)` triples).
-
-2. In `src/build_dataset.py`, add:
+Edit notebook cell [5] (and the `scripts/generate_notebook.py` cell-5 builder, which currently does `code(H[5]["source"])` — same as before):
 
 ```python
-def build_ctfdojo_dataset(output_path: str, max_samples: int = 500) -> list:
-    """Load amazon-science/CTF-Dojo SFT trajectories from a local clone."""
-    import json as _json
-    from pathlib import Path
+# Old:
+else:  # 9B
+    LORA_R = 16
+    LORA_ALPHA = 32      # alpha/r = 2
 
-    ctfdojo_root = Path("./data/raw/ctfdojo")
-    sft_dir = ctfdojo_root / "SFT-data"
-
-    if not sft_dir.exists():
-        # Clone shallow
-        from git import Repo
-        ctfdojo_root.parent.mkdir(parents=True, exist_ok=True)
-        Repo.clone_from(
-            "https://github.com/amazon-science/CTF-Dojo",
-            str(ctfdojo_root),
-            depth=1,
-        )
-
-    examples = []
-    for jsonl_file in sft_dir.rglob("*.jsonl"):
-        with open(jsonl_file) as f:
-            for line in f:
-                if len(examples) >= max_samples:
-                    break
-                item = _json.loads(line)
-                task = item.get("task", item.get("question", ""))
-                trajectory = item.get("trajectory", item.get("expert_trajectory", ""))
-                flag = item.get("flag", "")
-                if not task or not trajectory:
-                    continue
-                examples.append({
-                    "instruction": task,
-                    "input": "",
-                    "output": trajectory + (f"\n\nFlag: {flag}" if flag else ""),
-                    "category": item.get("category", "ctf"),
-                    "source": "ctfdojo",
-                })
-        if len(examples) >= max_samples:
-            break
-
-    Path(output_path).parent.mkdir(exist_ok=True)
-    with open(output_path, "w") as f:
-        for ex in examples:
-            f.write(json.dumps(ex) + "\n")
-    print(f"Saved {len(examples)} CTF-Dojo examples to {output_path}")
-    return examples
+# New (match configs/qwen35.yaml):
+else:  # 9B
+    LORA_R = 32
+    LORA_ALPHA = 64      # alpha/r = 2
 ```
 
-3. In `src/build_dataset.py:main()`, add to argparse choices and dispatch:
+**Verification**
+
+Open the notebook, set `MODE = "quality"`, run cell [5], confirm the print line shows `lora_r = 32`.
+
+---
+
+## Bug H — `CTF_WRITEUP_REPOS` drift (notebook 10 vs `src/build_dataset.py` 13) 🟡 MED
+
+**Where**
+
+- `src/build_dataset.py:CTF_WRITEUP_REPOS` lists 13 repos (2 picoCTF + 2 CryptoHack + 3 pwncollege + Adamkadaban + Exploit-Writeups + 0x1earn + reversingBits + RE-MA-Roadmap + Crypto-Cat/CTF + how2exploit)
+- Notebook cell [7] lists only 10 (with the 3 pwncollege repos commented out)
+- `AGENTS.md` "Writeup repos" table claims 13
+
+**Problem**
+
+The notebook misses 4 valuable repos: 2 RE (reversingBits, RE-MA-Roadmap) and 2 pwn (Crypto-Cat/CTF, how2exploit). These are also documented in AGENTS.md. The notebook-only pipeline misses ~30% of the available writeup signal.
+
+**Action**
+
+Edit notebook cell [7] (and `scripts/generate_notebook.py`'s `code(H[7]["source"])` block, which currently passes it through):
+
+Add the 4 missing repos before `print(f"Configured...")`:
 
 ```python
-parser.add_argument("--source", choices=["writeups", "docs", "ctfd", "all", "merge"], required=True)
-
-# In dispatch:
-elif args.source == "ctfd":
-    build_ctfdojo_dataset(f"{args.output_dir}/ctfdojo.jsonl", args.max_per_repo)
+# After the existing Adamkadaban / Exploit-Writeups / 0x1earn entries:
+{"url": "https://github.com/mohitmishra786/reversingBits", "name": "reversingBits", "category": "rev", "max_per_repo": 200},
+{"url": "https://github.com/x86byte/RE-MA-Roadmap", "name": "re-ma-roadmap", "category": "rev", "max_per_repo": 150},
+{"url": "https://github.com/Crypto-Cat/CTF", "name": "cryptocat-ctf", "category": "pwn", "max_per_repo": 200},
+{"url": "https://github.com/Bretley/how2exploit_binary", "name": "how2exploit", "category": "pwn", "max_per_repo": 100},
 ```
 
-4. In `finetune.sh`, after the writeups/docs steps, add:
+Optional: keep pwncollege repos commented out (AGENTS.md confirms they extract 0 examples due to non-standard markdown).
+
+**Verification**
 
 ```bash
-uv run src/build_dataset.py --source ctfd --output-dir data/raw --max-per-repo 500
-```
-
-5. Update `AGENTS.md` "Build command (Full mode)" section to include `ctfd` as a step.
-
-**Verification**: After running, `data/raw/ctfdojo.jsonl` should contain ≥400 examples. Run `head -1 data/raw/ctfdojo.jsonl | python3 -m json.tool` and confirm structure:
-
-```json
-{
-  "instruction": "...",
-  "input": "",
-  "output": "...trajectory...Flag: ...",
-  "category": "...",
-  "source": "ctfdojo"
-}
+# In Colab after cell [10] finishes:
+print(f"Configured {len(CTF_WRITEUP_REPOS)} repos")
+# Expected: 14 (10 + 4 added; pwncollege still commented out)
+print(len(all_writeups))
+# Expected: ~2500+ examples (vs ~1900 before)
 ```
 
 ---
 
-## OPEN #6 — Two-stage SFT recipe (curriculum learning)
+## Bug J — `src/train.py` lacks length filter (notebook cell [22] has one) 🟡 HIGH
 
-**Where**: `src/train.py` (add a `train_two_stage()` function), `finetune.sh`, configs
+**Where**: `src/train.py` lines 130–138 (the dataset prep block, between `dataset.filter(has_assistant)` and `split = dataset.train_test_split(...)`).
 
-**Concept**
-- Stage 1 (1 epoch): LoRA `r=8` on full ~1.5k-example mixed dataset. Establishes broad CTF/coding distribution.
-- Stage 2 (2 epochs): LoRA `r=32` `alpha=64` **on a curated subset only** — synthetic_rev_pwn + ctfdojo + hand-picked writeups. Sharpens specific patterns.
+**Problem**
 
-**Rationale**: A single-stage `r=32` over the full noisy dataset risks overfitting on long writeup explanations. Splitting lets the broad-base + sharp-pattern approach mirror how humans learn.
+Notebook cell [22] drops samples that exceed `max_seq_length` after tokenization, with:
+```python
+def length_ok(ex):
+    text = actual_tokenizer.apply_chat_template(ex["messages"], tokenize=False)
+    tokens = actual_tokenizer.encode(text, add_special_tokens=False)
+    return len(tokens) <= MAX_SEQ_LENGTH
 
-**Action (sketch only — ~50 LoC)**
+before = len(dataset)
+dataset = dataset.filter(length_ok, desc="Filter by length")
+```
+
+This prevents OOM on long examples when `max_seq_length=4096` is set. **`src/train.py` does NOT do this**. So if a user runs `uv run src/train.py --model qwen35` on a CTF-writeup-heavy dataset, a single 5000-token example will OOM the T4. Notebook cell is safe; script isn't.
+
+**Action**
+
+Port the filter into `src/train.py` between `dataset = dataset.filter(has_assistant)` and the train_test_split call.
 
 ```python
-# In src/train.py, add:
-def train_two_stage(model_key, data_file, curated_file, output_dir):
-    """Two-stage SFT: broad r=8 first, then sharp r=32 on curated subset."""
-    config = load_config(model_key)
-    # Stage 1: r=8, 1 epoch, full data
-    s1_config = dict(config)
-    s1_config["model"]["r"] = 8
-    s1_config["model"]["lora_alpha"] = 16
-    s1_config["training"]["num_train_epochs"] = 1
-    train(model_key, data_file, f"{output_dir}/stage1", epochs=1)
-    # Stage 2: r=32 alpha=64, 2 epochs, curated only — load stage1 LoRA + continue
-    # (Skeletal — full impl requires re-loading the LoRA and rebuilding the model)
-    ...
+# After line ~135 (current code):
+dataset = dataset.filter(has_assistant)
+print(f"    Dataset size: {len(dataset)} examples")
+
+# NEW: length filter using chat-template length
+def length_ok(ex):
+    text = tokenizer.apply_chat_template(ex["messages"], tokenize=False)
+    tokens = tokenizer.encode(text, add_special_tokens=False)
+    return len(tokens) <= model_config["max_seq_length"]
+
+before_len = len(dataset)
+dataset = dataset.filter(length_ok, desc="Filter by length")
+print(f"    Length-filtered: {len(dataset)} examples (dropped {before_len - len(dataset)} long samples)")
 ```
 
-Alternatively, encode the two stages directly in `finetune.sh`:
+**Verification**
 
 ```bash
-# Stage 1
-./finetune.sh qwen35 --train --epochs 1 --output outputs/qwen35-ctf-stage1  # r=8
-# Stage 2 (manual override of configs)
-QWEN_LORA_R=32 QWEN_LORA_ALPHA=64 QWEN_EPOCHS=2 \
-  ./finetune.sh qwen35 --train --data data/merged/curated.jsonl \
-  --output outputs/qwen35-ctf-final
+# After a script-mode run completes:
+cat outputs/<model>-ctf/trainer_state.json | python3 -c "import json,sys; s=json.load(sys.stdin); print('global_step:', s['global_step'])"
+# Expected: > 0 (no OOM crash mid-run)
+
+# If you don't strip the merged/processed dataset length first, count long examples:
+python3 -c "
+from datasets import load_dataset
+from transformers import AutoTokenizer
+tok = AutoTokenizer.from_pretrained('unsloth/Qwen3.5-9B')
+ds = load_dataset('json', data_files={'train':'data/merged/train.jsonl'}, split='train')
+def too_long(ex):
+    t = tok.apply_chat_template(ex['messages'], tokenize=False)
+    return len(tok.encode(t, add_special_tokens=False)) > 4096
+n_long = sum(too_long(x) for x in ds.select(range(min(100, len(ds)))))
+print(f'Long-example rate: {n_long}/100 sampled')
+"
 ```
 
-**Verification**: After both stages, generate 5 inference probes (use notebook cells [30]/[31]) and compare against single-stage `r=32` runs. Significant qualitative gain is the success metric — exact numbers depend on prompts.
+---
 
-**Status**: marked **MEDIUM, optional** — implement only after #3-#5 are stable.
+# Cleanup path — doc drift only (~12 edits)
+
+## Item D — `README.md` "Training Modes" table is stale
+
+The README's section "1.6 Training Modes (Fast vs Full)" lists:
+
+| Parameter | Fast (~30 min) | Full (~50-70 min) |
+| LORA_R | 8 | 16 |
+| MAX_SEQ_LENGTH | 2048 | 4096 |
+| NUM_EPOCHS | 1 | 2 |
+
+But the actual notebook cell [5] uses `MODE = "fast"/"quality"`, with current values:
+- Fast: r=8, 4B, seq=2048, 1 epoch
+- Quality: r=32 (after Bug C fix), 9B, seq=4096, 2 epochs
+
+**Edit**: replace the table and the surrounding `MODE = "full"` → `MODE = "quality"` references.
+
+## Item E — `TRAINING.md` "Training Config by Model" table is stale
+
+The current table says for Qwen 3.5 9B:
+- LoRA rank: 16
+- LoRA alpha: 16
+
+But `configs/qwen35.yaml` says `r: 32, lora_alpha: 64`. The Training Config table is wrong.
+
+**Edit**: replace the row `Qwen 3.5 9B | 4-bit QLoRA | LoRA rank 16 | LoRA alpha 16 | ...` with `Qwen 3.5 9B | 4-bit QLoRA | LoRA rank 32 | LoRA alpha 64`.
+
+## Item F — `README.md` lists removed `kyleavery/picoctf` dataset
+
+In `README.md` "Also downloads structured datasets from HuggingFace" table:
+```
+| `kyleavery/picoctf` | 120 samples | picoCTF challenge solutions |
+```
+
+But `src/download_datasets.py` no longer references it (was removed). The notebook cell [13] (`HF_DATASETS = [...]`) does include `kyleavery/picoctf`. Acceptable in notebook, **README should remove it OR sync the notebook too**.
+
+**Edit**: remove the row from `README.md` (preferred; notebook already has it).
+
+## Item G — `README.md` + `AGENTS.md` duplicate the Fast/Full table
+
+Both files have essentially the same Fast vs Full table. Pick one as canonical.
+
+**Edit**: keep it in AGENTS.md (where it appeared first and where the build commands live); remove from README.md.
+
+## Item I — `src/process_data.py` `--no-system-prompt` argparse help wording
+
+Line 90:
+```python
+parser.add_argument("--no-system-prompt", action="store_true", help="Omit system role from output messages. Default: ON (system prompt written).")
+```
+
+The "Default: ON" wording reads as if the flag is enabled by default. The CLI truth is: the flag's *argparse default* is `False`, which means by default `--no-system-prompt` is NOT passed and system prompts ARE written.
+
+**Edit**: change help text to:
+```python
+help="If set, skip system role in output messages. (Default: include system prompt.)"
+```
+
+---
+
+# Items confirmed NOT bugs
+
+## Item K — `_build_curated_subset` open mode is `"w"` (safe overwrite)
+
+`src/train.py:317` calls `Path(output_path)` then `with open(output_path, "w") as f:`. Mode `"w"` truncates and overwrites the file. If a previous run wrote stale `curated.jsonl`, it's safely replaced. **Not a bug, no action.**
+
+Audit comment was about: "what if ctfdojo.jsonl is updated on disk but curated jsonl is from a previous run?" Answer: stage 2 will rebuild `curated.jsonl` from current `data/raw/ctfdojo.jsonl` because `_build_curated_subset` re-reads sources each call.
 
 ---
 
 # Decision log: abliteration **REJECTED**
 
-## Rationale
+> Preserved verbatim from prior plan, still valid.
+
 1. **Mechanism is real but evidence is weak.** Arditi et al. (NeurIPS 2024) shows refusal lives in a single direction. But **no published, controlled study benchmarks abliterated-vs-aligned base + identical SFT on CTF/offensive-security tasks**. Community claims are folkloric; some cited papers could not be independently verified.
-2. **The user's data may already override refusal.** SFT gradients on `{"role":"assistant","content":"<actual exploit>"}` examples push the model away from the refusal distribution regardless of base. The "ghost" hypothesis is mechanistically plausible but unmeasured.
-3. **Alignment tax is documented.** Abliteration measurably regresses MMLU/GSM8K in published evaluations. Loss is usually small but compounding with CTF specialization further muddies the outcome.
-4. **Qwen 3.5 9B Instruct is already permissive** on technical content vs Llama-3.1-Instruct. Empirically less refusal-firing, less payoff from ablation.
-5. **Cost**: dedicated ablation calibration + a separate ablation pass for each new base model. For a single-user, single-T4-budget setup, the engineering cost outweighs an uncertain single-digit-percent lever.
-6. **Coder specialization beats abliteration.** If the user wanted to chase this lever specifically, the higher-ROI move is `Qwen2.5-Coder-7B-Instruct-abliterated` (coder + ablation), not just ablation on Qwen3.5-9B. But coder-7B loses parameter count and context length.
+2. **The data may already override refusal.** SFT gradients on `{"role":"assistant","content":"<actual exploit>"}` examples push the model away from the refusal distribution regardless of base.
+3. **Alignment tax is documented.** Abliteration measurably regresses MMLU/GSM8K in published evaluations.
+4. **Qwen 3.5 9B Instruct is already permissive** on technical content vs Llama-3.1-Instruct.
+5. **Cost**: dedicated ablation calibration per base model. For a single-user, single-T4-budget setup, the engineering cost outweighs an uncertain single-digit-percent lever.
 
-## What would change this decision
-- A published controlled benchmark showing abliterated-vs-aligned + SFT differs by >5% on a standard CTF eval dataset (ideally Cybench or CTF-ACE).
-- Direct empirical confirmation that the user's current pipeline is producing refusals on his training data.
-- An `Qwen3.5-9B-Instruct-Abliterated` checkpoint published on HuggingFace with all layers correctly ablated and capability preserved.
-
-Until one of those appears, **abliteration is out of scope.**
+**What would change the decision**: published benchmark showing abliterated-SFT differs by >5% on a standard CTF eval dataset; or empirical confirmation that *this* pipeline produces refusals on its training data.
 
 ---
 
-# Verification matrix (smoke tests after each implementation)
+# Verification matrix (smoke tests after each fix)
 
-| Item | Verification | Pass criterion |
+| Fix | Verification | Pass criterion |
 |---|---|---|
-| OPEN #1 (packing/masking) | Run notebook cells [18]-[25] on T4 | Cell [25] prints "Total steps: ~N" and `history` shows loss decreasing |
-| OPEN #2 (cell [10] parallel) | Run cell [10] on FAST mode | Wall-clock drops from ~15 min → ~5 min. Total examples same. |
-| OPEN #3 (LoRA r=32) | Run cell [22]-[25] | VRAM after step 23 ≤ 13.0 GB / 16.0 GB |
-| OPEN #4 (grad_accum=8) | Run cell [25] | `global_step` is half of prior r=16 grad_accum=4 run's step count |
-| OPEN #5 (CTF-Dojo data) | Run `head -1 data/raw/ctfdojo.jsonl` | Schema matches: instruction/input/output/source=ctfdojo |
-| OPEN #6 (two-stage) | Run end-to-end | Stage 2 LoRA produces visibly different outputs than stage 1 (qualitative check on 5 prompts) |
+| Bug A (packing+masking) | Add print-statement cell on Colab first: `import trl; print(trl.__version__)`. Branch by output. | Cell [24] begins training without `ValueError` |
+| Bug B (generator) | `git restore notebooks/qwen4b_self_contained.ipynb && python3 scripts/generate_notebook.py && python3 -c "import json; print(json.load(open('notebooks/qwen4b_self_contained.ipynb'))['cells'][9]['source'])"` | Output starts with `def extract_writeup(...)` |
+| Bug C (LoRA r=32) | Open notebook, set `MODE = "quality"`, run cell [5] | Print line shows `lora_r = 32` |
+| Bug H (CTF_WRITEUP_REPOS) | Run cell [7] in Colab | `Configured 14 repos` (was 10) |
+| Bug J (length filter) | `uv run src/train.py --model qwen35 --data data/merged/train.jsonl` with patched code | No OOM, `trainer_state.json["global_step"]` > 0 |
+| Items D/E/F/G (docs) | Re-read each file | No stale values |
+| Item I (argparse help) | `uv run src/process_data.py --help` | Help text says "Default: include system prompt" |
 
 ---
 
-# Order of execution — what to ship in what order
+# Order of execution
 
-1. **OPEN #1** — must do first; rest are scoped around it. ~5 LoC.
-2. **OPEN #2** — performance, not crash. After #1 is verified. ~20 LoC + notebook regen.
-3. **OPEN #3** + **OPEN #4** — bump Qwen 35 yaml in one edit. ~5 LoC.
-4. **OPEN #5** — new data source, gated on data-pipeline stability. ~75 LoC.
-5. **OPEN #6** — optional polish, gated on #3-#5 producing stable gains. ~50 LoC.
+1. **Bug A** — must do first; rest are scoped around it. ~5 LoC + 1 Colab diag cell.
+2. **Bug B** — dev-time, no Colab needed. ~30 LoC.
+3. **Bug J** — script-mode OOM safety. ~15 LoC + 1 script-mode validation.
+4. **Bug C** — 9B quality run correctness. ~3 LoC.
+5. **Bug H** — data parity with src/. ~6 LoC + Colab cell [7]+[10] run.
+6. **Cleanup items D-G** — doc edits only, no runtime impact. ~10 edits.
+7. **Item I** — argparse text. 1 line.
 
-**Total**: ~155 LoC, ~3 hours of focused implementation, ~3-5 hours of Colab training validation.
-
----
-
-# What this plan deliberately does NOT cover
-
-- Abliteration, base-model swap, refusal-direction probing. (Decision logged above.)
-- Replacing the `extract_constants()` brittleness in `scripts/generate_notebook.py` (cell [18] fix B inlined instead of fixing the generator). Acceptable since cell [18] is now stable through the inlining.
-- Manual abliteration tool availability — left as a future experiment if the decision reverses.
-- A `Qwen2.5-Coder-7B` substitution — would require data re-balancing; documented as a higher-ROI alternative to abliteration only.
+**Total**: ~70 LoC of code changes + ~11 doc edits + 1 Colab diagnosis + 1 Colab training validation run.
 
 ---
 
-# Reference: original (historical) review context
+# What this plan DELIBERATELY does NOT cover
 
-The plan above is based on a multi-iteration review:
+- Abliteration / base-model swap (rejected above)
+- Manual abliteration tool evaluation (low ROI for your T4 budget)
+- Pseudocode for `train_two_stage`'s full impl of reloading LoRA mid-session — only the `train(...)` orchestrator wrapper exists; full LoRA-merge-and-resume needs separate iteration
+- Replacing the `extract_constants()` brittleness in `scripts/generate_notebook.py` — cells [9]/[10]/[18] are now stable via inlining, so the brittleness is harmless in practice
+- A `Qwen2.5-Coder-7B` model swap — would require data re-balancing
 
-- **Initial review** (33 findings) — quality, efficiency, speed across the entire pipeline
-- **Prior FIX PLAN** (commit `20bdd36`) — implemented 8 fixes; some overlapped with current priorities
-- **Notebook bug fixes** (`400e1b8`) — landed Fix A and Fix B; Fix C deferred (this plan)
-- **Abliteration research** — rejected (decision logged above)
+---
 
-The full prior FIX_PLAN text is preserved in git history (commit `400e1b8`).
+# Reference
+
+- Audit pass: commit `400e1b8` + family (12+ commits in this branch)
+- Original audit: prior FIX_PLAN.md preserved in git history
+- TRL packing+assistant_only_loss behavior research: see commit `52c558b` and git history
+- Abliteration research: rejected; preserved for next agent's audit avoidance

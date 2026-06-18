@@ -62,21 +62,9 @@ Also downloads structured datasets from HuggingFace:
 
 These examples use chain-of-thought reasoning: the model learns to analyze before solving, not just jump to the answer.
 
-### 1.6 Training Modes (Fast vs Full)
+### 1.6 Training Modes
 
-The notebook supports two training modes with different dataset sizes:
-
-| Parameter | Fast (~30 min) | Full (~50-70 min) |
-|-----------|----------------|-------------------|
-| MAX_PER_REPO | 30 | no limit |
-| MAX_HF_SAMPLES | 200 | no limit |
-| MAX_DOC_SECTIONS | 5 | no limit |
-| MAX_OUTPUT_LEN | 2000 chars | 20000 chars |
-| MAX_SEQ_LENGTH | 2048 | 4096 |
-| LORA_R | 8 | 16 |
-| NUM_EPOCHS | 1 | 2 |
-
-Set `MODE = "fast"` or `MODE = "full"` in notebook Section 2.0.
+See `AGENTS.md` for the complete Fast/Full mode configuration table, including LoRA params, dataset limits, and estimated training times.
 
 ### 2. Data Processing (`src/process_data.py`)
 
