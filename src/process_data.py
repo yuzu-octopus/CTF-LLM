@@ -155,7 +155,7 @@ def main():
     parser.add_argument("--output", default="data/processed", help="Output directory")
     parser.add_argument("--merge", action="store_true", help="Merge processed files")
     parser.add_argument("--system-prompt", choices=["ctf", "coding", "auto"], default="auto")
-    parser.add_argument("--no-system-prompt", action="store_true", help="Omit system role from output messages. Default: ON (system prompt written).")
+    parser.add_argument("--no-system-prompt", action="store_true", help="If set, skip system role in output messages. (Default: include system prompt.)")
     args = parser.parse_args()
     
     start_time = time.time()

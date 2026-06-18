@@ -97,6 +97,7 @@ src_funcs = {
     "load_hf_with_fallback": adapt_for_notebook(extract_function("download_datasets", "load_hf_with_fallback")),
     "extract_qa": adapt_for_notebook(extract_function("download_datasets", "extract_qa")),
     "scrape_doc": adapt_for_notebook(extract_function("build_dataset", "scrape_documentation")),
+    "extract_writeup": adapt_for_notebook(extract_function("build_dataset", "extract_writeups_from_repo")),
     "system_prompts": extract_constants("process_data", ["SYSTEM_PROMPT_CTF", "SYSTEM_PROMPT_CODING"]),
     "is_ctf_content": adapt_for_notebook(extract_function("process_data", "is_ctf_content")),
     "ctf_keywords": adapt_for_notebook(extract_constants("process_data", ["CTF_KEYWORDS"])),

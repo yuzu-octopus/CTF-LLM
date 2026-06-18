@@ -121,8 +121,8 @@ colab stop -s finetune-<model>
 |-----------|-------------|-------------|-------------|
 | Base model | `unsloth/gemma-4-E4B-it` | `unsloth/Qwen3.5-9B` | `unsloth/Qwen3.5-4B` |
 | Quantization | 16-bit LoRA | 4-bit QLoRA | 4-bit QLoRA |
-| LoRA rank | 32 | 16 | 16 |
-| LoRA alpha | 32 | 16 | 16 |
+| LoRA rank | 32 | 32 | 8 |
+| LoRA alpha | 32 | 64 | 16 |
 | Target modules | all-linear | q/k/v/o + gate/up/down | q/k/v/o + gate/up/down |
 | Max seq length | 4096 | 4096 | 4096 |
 | Batch size | 1 | 1 | 1 |
