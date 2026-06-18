@@ -134,7 +134,18 @@ def train(model_key: str, data_file: str, output_dir: str, epochs: int = 3, lora
     dataset = load_dataset("json", data_files={"train": data_file}, split="train")
     dataset = dataset.filter(has_assistant)
     print(f"    Dataset size: {len(dataset)} examples")
-    
+
+    # Length filter using chat-template token count
+    actual_tokenizer = tokenizer.tokenizer if hasattr(tokenizer, 'tokenizer') else tokenizer
+    def length_ok(ex):
+        text = actual_tokenizer.apply_chat_template(ex["messages"], tokenize=False)
+        tokens = actual_tokenizer.encode(text, add_special_tokens=False)
+        return len(tokens) <= model_config["max_seq_length"]
+
+    before_len = len(dataset)
+    dataset = dataset.filter(length_ok, desc="Filter by length")
+    print(f"    Length-filtered: {len(dataset)} examples (dropped {before_len - len(dataset)} long samples)")
+
     split = dataset.train_test_split(test_size=0.1, seed=42)
     train_dataset, eval_dataset = split["train"], split["test"]
     print(f"    Train: {len(train_dataset)}, Eval: {len(eval_dataset)}")
