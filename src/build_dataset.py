@@ -28,6 +28,9 @@ try:
 except ImportError:
     HAS_TQDM = False
 
+# Generous safety cap for extraction length
+MAX_OUTPUT_LEN = 20000
+
 
 # GitHub repos to scrape for CTF writeups
 CTF_WRITEUP_REPOS = [
@@ -48,6 +51,14 @@ CTF_WRITEUP_REPOS = [
     {"url": "https://github.com/Adamkadaban/CTFs", "name": "ctfs-adamkadaban", "category": "multi"},
     {"url": "https://github.com/Cryptogenic/Exploit-Writeups", "name": "exploit-writeups", "category": "pwn"},
     {"url": "https://github.com/ffffffff0x/1earn", "name": "0x1earn", "category": "multi"},
+
+    # Reverse engineering focused
+    {"url": "https://github.com/mohitmishra786/reversingBits", "name": "reversingBits", "category": "rev", "max_per_repo": 200},
+    {"url": "https://github.com/x86byte/RE-MA-Roadmap", "name": "re-ma-roadmap", "category": "rev", "max_per_repo": 150},
+
+    # Binary exploitation (pwn) focused
+    {"url": "https://github.com/Crypto-Cat/CTF", "name": "cryptocat-ctf", "category": "pwn", "max_per_repo": 200},
+    {"url": "https://github.com/Bretley/how2exploit_binary", "name": "how2exploit", "category": "pwn", "max_per_repo": 100},
 ]
 
 # Documentation repos/files to scrape (fixed URLs)
@@ -130,8 +141,9 @@ def find_solution_boundary(content: str) -> int:
     return len(lines)
 
 
-def extract_challenge_description(content: str) -> str:
-    """Extract challenge description from writeup markdown (before solution)"""
+def extract_challenge_description(content: str, category: str = "") -> str:
+    """Extract challenge description from writeup markdown (before challenge desc)"""
+    max_len = MAX_OUTPUT_LEN
     lines = content.split('\n')
     boundary = find_solution_boundary(content)
     
@@ -142,13 +154,14 @@ def extract_challenge_description(content: str) -> str:
     cleaned = re.sub(r'\n{3,}', '\n\n', cleaned)
     cleaned = cleaned.strip()
     
-    if len(cleaned) > 2000:
-        cleaned = cleaned[:2000] + "..."
+    if len(cleaned) > max_len:
+        cleaned = cleaned[:max_len] + "..."
     return cleaned
 
 
-def extract_solution_text(content: str) -> str:
+def extract_solution_text(content: str, category: str = "") -> str:
     """Extract solution text from writeup markdown (after challenge description)"""
+    max_len = MAX_OUTPUT_LEN
     lines = content.split('\n')
     boundary = find_solution_boundary(content)
     
@@ -161,7 +174,7 @@ def extract_solution_text(content: str) -> str:
     solution = solution.strip()
     
     if len(solution) > 3000:
-        solution = solution[:3000] + "..."
+        solution = solution[:max_len] + "..."
     return solution
 
 
@@ -200,8 +213,8 @@ def extract_writeups_from_repo(repo_path: str, category: str, repo_name: str) ->
                 except Exception:
                     pass
             
-            description = extract_challenge_description(content)
-            solution_text = extract_solution_text(content)
+            description = extract_challenge_description(content, category)
+            solution_text = extract_solution_text(content, category)
             
             if not description or len(description) < 50:
                 continue
@@ -217,7 +230,7 @@ def extract_writeups_from_repo(repo_path: str, category: str, repo_name: str) ->
                     solution_parts.append(solution_text)
                 for block in code_blocks[:3]:
                     lang = block["lang"]
-                    code = block["code"][:2000]
+                    code = block["code"][:MAX_OUTPUT_LEN]
                     solution_parts.append(f"```{lang}\n{code}\n```")
                 output_text = "\n\n".join(solution_parts)
             else:
@@ -233,7 +246,9 @@ def extract_writeups_from_repo(repo_path: str, category: str, repo_name: str) ->
                 examples.append({
                     "instruction": instruction,
                     "input": input_text,
-                    "output": output_text
+                    "output": output_text,
+                    "category": category,
+                    "source": repo_name,
                 })
                 extracted += 1
             
@@ -322,8 +337,8 @@ def scrape_documentation(url: str, name: str) -> list:
             
             examples.append({
                 "instruction": f"Explain how to use {name} for: {title}",
-                "input": section[:2000],
-                "output": f"Based on {name} documentation:\n\n{section[:2000]}"
+                "input": section[:MAX_OUTPUT_LEN],
+                "output": f"Based on {name} documentation:\n\n{section[:MAX_OUTPUT_LEN]}"
             })
     except Exception as e:
         print(f"  Failed to scrape {url}: {e}")
@@ -342,11 +357,12 @@ def build_writeups_dataset(output_path: str, max_per_repo: int = 500):
     for repo_idx, repo in enumerate(CTF_WRITEUP_REPOS):
         print(f"\n[{repo_idx + 1}/{total_repos}] Cloning {repo['name']}...")
         repo_path = f"{tempfile.gettempdir()}/{repo['name']}"
-        
+
         if clone_repo(repo["url"], repo_path):
             print(f"  Extracting writeups from {repo['name']}...")
             examples = extract_writeups_from_repo(repo_path, repo["category"], repo['name'])
-            examples = examples[:max_per_repo]
+            repo_max = repo.get("max_per_repo", max_per_repo)
+            examples = examples[:repo_max]
             all_examples.extend(examples)
         else:
             print(f"  Skipped (clone failed)")
@@ -449,10 +465,9 @@ def main():
         files = [
             f"{args.output_dir}/writeups.jsonl",
             f"{args.output_dir}/docs.jsonl",
-            f"{args.output_dir}/ctf_webserver.jsonl",
             f"{args.output_dir}/opencode_reasoning.jsonl",
             f"{args.output_dir}/fenrir_cybersecurity.jsonl",
-            f"{args.output_dir}/vulnerability_detection.jsonl",
+            f"{args.output_dir}/synthetic_rev_pwn.jsonl",
         ]
         merge_datasets(files, f"{args.output_dir}/merged_train.jsonl")
     
