@@ -61,12 +61,12 @@ def train(model_key: str, data_file: str, output_dir: str, epochs: int = 3, lora
     print("\n  [1/5] Loading model...")
     step_start = time.time()
     
-    # Use FastVisionModel for Gemma 4, FastLanguageModel for others
-    if model_key == "gemma4":
+    # Use FastVisionModel for Gemma 4 models, FastLanguageModel for others
+    if model_key.startswith("gemma"):
         from unsloth import FastVisionModel
         model, processor = FastVisionModel.from_pretrained(
             model_name=model_config["name"],
-            load_in_4bit=model_config.get("load_in_4bit", False),
+            load_in_4bit=model_config.get("load_in_4bit", True),
             use_gradient_checkpointing="unsloth",
         )
         tokenizer = processor.tokenizer
@@ -85,7 +85,7 @@ def train(model_key: str, data_file: str, output_dir: str, epochs: int = 3, lora
     print("\n  [2/5] Setting up chat template...")
     from unsloth import get_chat_template
     
-    if model_key == "gemma4":
+    if model_key.startswith("gemma"):
         processor = get_chat_template(processor, "gemma-4")
         tokenizer = processor.tokenizer
     else:
@@ -95,7 +95,7 @@ def train(model_key: str, data_file: str, output_dir: str, epochs: int = 3, lora
 
     # Step 3/5: Configure LoRA
     print("\n  [3/5] Configuring LoRA adapters...")
-    if model_key == "gemma4":
+    if model_key.startswith("gemma"):
         from unsloth import FastVisionModel
         model = FastVisionModel.get_peft_model(
             model,
@@ -200,7 +200,7 @@ def train(model_key: str, data_file: str, output_dir: str, epochs: int = 3, lora
     tokenizer.save_pretrained(lora_path)
     print(f"    ✓ {lora_path}")
     
-    if model_key == "gemma4":
+    if model_key.startswith("gemma"):
         print("  Skipping GGUF export (not supported on FastVisionModel)")
     else:
         print("  Exporting GGUF model...")
@@ -208,7 +208,7 @@ def train(model_key: str, data_file: str, output_dir: str, epochs: int = 3, lora
         model.save_pretrained_gguf(gguf_path, tokenizer, quantization_method="q4_k_m")
         print(f"    ✓ {gguf_path}")
 
-    if model_key == "gemma4":
+    if model_key.startswith("gemma"):
         print("  Skipping merged export (not supported on FastVisionModel)")
     else:
         print("  Exporting merged model...")
@@ -323,7 +323,7 @@ def _build_curated_subset(output_path: str):
 
 def main():
     parser = argparse.ArgumentParser(description="Unified CTF/Coding model fine-tuning")
-    parser.add_argument("--model", choices=["gemma4", "qwen35", "qwen35-4b"], required=True,
+    parser.add_argument("--model", choices=["gemma4", "gemma4-12b", "qwen35", "qwen35-4b"], required=True,
                        help="Model to fine-tune")
     parser.add_argument("--data", default="data/merged/train.jsonl",
                        help="Training data file (JSONL)")

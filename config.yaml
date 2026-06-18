@@ -16,13 +16,40 @@ models:
       bias: none
       max_seq_length: 4096
       batch_size: 1
-      load_in_4bit: false
+      load_in_4bit: true
       use_gradient_checkpointing: unsloth
     training:
       num_train_epochs: 3
       learning_rate: 1.0e-4
       warmup_ratio: 0.05
       gradient_accumulation_steps: 4
+      optim: adamw_8bit
+      seed: 3407
+      save_strategy: steps
+      save_steps: 100
+      save_total_limit: 2
+      eval_strategy: steps
+      eval_steps: 100
+      load_best_model_at_end: true
+      metric_for_best_model: eval_loss
+
+  gemma4-12b:
+    model:
+      name: google/gemma-4-12B-it
+      target_modules: all-linear
+      r: 32
+      lora_alpha: 64
+      lora_dropout: 0
+      bias: none
+      max_seq_length: 4096
+      batch_size: 1
+      load_in_4bit: true
+      use_gradient_checkpointing: unsloth
+    training:
+      num_train_epochs: 3
+      learning_rate: 1.0e-4
+      warmup_ratio: 0.05
+      gradient_accumulation_steps: 8
       optim: adamw_8bit
       seed: 3407
       save_strategy: steps

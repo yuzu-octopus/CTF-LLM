@@ -1,8 +1,9 @@
-# Gemma 4 E4B Configuration
-# Based on official Unsloth notebook: https://colab.research.google.com/github/unslothai/notebooks/blob/main/nb/Gemma4_(E2B)-Vision.ipynb
-# E4B works on free T4 (16GB VRAM)
+# Gemma 4 12B Unified Configuration
+# Encoder-free multimodal (text + image + audio), 256K context
+# 4-bit QLoRA on T4 16GB (tight: ~10-12GB with LoRA + optimizer)
+# Model: google/gemma-4-12B-it (no pre-quantized variant from Unsloth)
 model:
-  name: unsloth/gemma-4-E4B-it
+  name: google/gemma-4-12B-it
   target_modules: all-linear
   r: 32
   lora_alpha: 64
@@ -10,14 +11,14 @@ model:
   bias: none
   max_seq_length: 4096
   batch_size: 1
-  load_in_4bit: true  # 4-bit QLoRA standardized; set false for 16-bit LoRA
+  load_in_4bit: true
   use_gradient_checkpointing: unsloth
 
 training:
   num_train_epochs: 3
   learning_rate: 1.0e-4
   warmup_ratio: 0.05
-  gradient_accumulation_steps: 4
+  gradient_accumulation_steps: 8
   optim: adamw_8bit
   seed: 3407
   save_strategy: steps
