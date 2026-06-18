@@ -42,8 +42,8 @@ models:
         - gate_proj
         - up_proj
         - down_proj
-      r: 16
-      lora_alpha: 32
+      r: 32
+      lora_alpha: 64
       lora_dropout: 0
       bias: none
       max_seq_length: 4096
@@ -54,7 +54,7 @@ models:
       num_train_epochs: 3
       learning_rate: 2e-4
       warmup_steps: 10
-      gradient_accumulation_steps: 4
+      gradient_accumulation_steps: 8
       optim: adamw_8bit
       seed: 3407
       save_total_limit: 1
