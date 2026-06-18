@@ -222,7 +222,7 @@ def extract_writeups_from_repo(repo_path: str, category: str, repo_name: str) ->
             has_code = len(code_blocks) > 0
             
             if has_code:
-                instruction = "Write an exploit/solution for this challenge"
+                instruction = "Analyze this CTF challenge, explain your approach step by step, and provide the exploit/solution code."
                 input_text = f"Challenge: {challenge_name}\nCategory: {category}\n\n{description}"
                 
                 solution_parts = []
@@ -234,7 +234,7 @@ def extract_writeups_from_repo(repo_path: str, category: str, repo_name: str) ->
                     solution_parts.append(f"```{lang}\n{code}\n```")
                 output_text = "\n\n".join(solution_parts)
             else:
-                instruction = "Explain how to solve this challenge step by step"
+                instruction = "Analyze this CTF challenge step by step: first identify the type and category, then examine the available information, reason through possible approaches, and finally provide your solution with explanation."
                 input_text = f"Challenge: {challenge_name}\nCategory: {category}\n\n{description}"
                 
                 if solution_text:
