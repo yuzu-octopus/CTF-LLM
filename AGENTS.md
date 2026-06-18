@@ -96,6 +96,17 @@ To regenerate synthetic data:
 uv run python -c "from src.synthetic_rev_pwn import save_to_file; save_to_file('data/raw/synthetic_rev_pwn.jsonl')"
 ```
 
+### CTF-Dojo data (`amazon-science/CTF-Dojo`)
+
+Execution-grounded trajectories from Amazon Science. Contains ~658 verified CTF challenges with `(task, expert_trajectory, flag)` triples.
+
+To include in training:
+```bash
+uv run src/build_dataset.py --source ctfd --output-dir data/raw --max-per-repo 500
+uv run src/process_data.py --input data/raw --output data/processed
+uv run src/process_data.py --merge --input data/processed --output data/merged
+```
+
 ### Build command (Full mode)
 
 ```bash

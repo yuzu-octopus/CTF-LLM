@@ -22,6 +22,8 @@ if [[ "$ACTION" == "--build-data" ]] || [[ "$ACTION" == "--all" ]]; then
     echo "[1/5] Building raw datasets..."
     uv run src/build_dataset.py --source writeups --max-per-repo 300
     uv run src/build_dataset.py --source docs --max-per-doc 100
+    echo "[2.5] Building CTF-Dojo dataset..."
+    uv run src/build_dataset.py --source ctfd --output-dir data/raw --max-per-repo 500
     uv run src/download_datasets.py --dataset all --max-samples 5000
 
     echo ""

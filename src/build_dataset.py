@@ -363,6 +363,54 @@ def scrape_documentation(url: str, name: str) -> list:
     return examples
 
 
+def build_ctfdojo_dataset(output_path: str, max_samples: int = 500) -> list:
+    """Load amazon-science/CTF-Dojo SFT trajectories from a local clone."""
+    import json as _json
+    from pathlib import Path
+
+    ctfdojo_root = Path("./data/raw/ctfdojo")
+    sft_dir = ctfdojo_root / "SFT-data"
+
+    if not sft_dir.exists():
+        ctfdojo_root.parent.mkdir(parents=True, exist_ok=True)
+        print(f"  Cloning amazon-science/CTF-Dojo...")
+        Repo.clone_from(
+            "https://github.com/amazon-science/CTF-Dojo",
+            str(ctfdojo_root),
+            depth=1,
+        )
+        print(f"  Clone complete")
+
+    examples = []
+    for jsonl_file in sft_dir.rglob("*.jsonl"):
+        with open(jsonl_file) as f:
+            for line in f:
+                if len(examples) >= max_samples:
+                    break
+                item = _json.loads(line)
+                task = item.get("task", item.get("question", ""))
+                trajectory = item.get("trajectory", item.get("expert_trajectory", ""))
+                flag = item.get("flag", "")
+                if not task or not trajectory:
+                    continue
+                examples.append({
+                    "instruction": task,
+                    "input": "",
+                    "output": trajectory + (f"\n\nFlag: {flag}" if flag else ""),
+                    "category": item.get("category", "ctf"),
+                    "source": "ctfdojo",
+                })
+        if len(examples) >= max_samples:
+            break
+
+    Path(output_path).parent.mkdir(exist_ok=True)
+    with open(output_path, "w") as f:
+        for ex in examples:
+            f.write(json.dumps(ex) + "\n")
+    print(f"Saved {len(examples)} CTF-Dojo examples to {output_path}")
+    return examples
+
+
 def build_writeups_dataset(output_path: str, max_per_repo: int = 500):
     """Build dataset from CTF writeup repos"""
     import concurrent.futures
@@ -481,7 +529,7 @@ def merge_datasets(input_files: list, output_path: str):
 
 def main():
     parser = argparse.ArgumentParser(description="Build custom CTF/coding datasets")
-    parser.add_argument("--source", choices=["writeups", "docs", "all", "merge"], required=True)
+    parser.add_argument("--source", choices=["writeups", "docs", "ctfd", "all", "merge"], required=True)
     parser.add_argument("--output-dir", default="data/raw")
     parser.add_argument("--max-per-repo", type=int, default=500)
     parser.add_argument("--max-per-doc", type=int, default=200)
@@ -498,9 +546,12 @@ def main():
         build_writeups_dataset(f"{args.output_dir}/writeups.jsonl", args.max_per_repo)
     elif args.source == "docs":
         build_docs_dataset(f"{args.output_dir}/docs.jsonl", args.max_per_doc)
+    elif args.source == "ctfd":
+        build_ctfdojo_dataset(f"{args.output_dir}/ctfdojo.jsonl", args.max_per_repo)
     elif args.source == "all":
         build_writeups_dataset(f"{args.output_dir}/writeups.jsonl", args.max_per_repo)
         build_docs_dataset(f"{args.output_dir}/docs.jsonl", args.max_per_doc)
+        build_ctfdojo_dataset(f"{args.output_dir}/ctfdojo.jsonl", args.max_per_repo)
 
     
     elapsed = time.time() - start_time
