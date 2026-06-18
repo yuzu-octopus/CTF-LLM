@@ -17,6 +17,7 @@ model:
   max_seq_length: 4096
   batch_size: 1
   load_in_4bit: true
+  use_rslora: false
   use_gradient_checkpointing: unsloth
 
 training:

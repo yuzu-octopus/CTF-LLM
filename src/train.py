@@ -99,7 +99,7 @@ def train(model_key: str, data_file: str, output_dir: str, epochs: int = 3, lora
         from unsloth import FastVisionModel
         model = FastVisionModel.get_peft_model(
             model,
-            finetune_vision_layers=True,
+            finetune_vision_layers=False,  # CTF data is 100% text
             finetune_language_layers=True,
             finetune_attention_modules=True,
             finetune_mlp_modules=True,
@@ -108,9 +108,10 @@ def train(model_key: str, data_file: str, output_dir: str, epochs: int = 3, lora
             lora_dropout=model_config.get("lora_dropout", 0),
             bias=model_config.get("bias", "none"),
             random_state=training_config.get("seed", 3407),
-            use_rslora=False,
+            use_rslora=model_config.get("use_rslora", False),
             loftq_config=None,
-            target_modules=model_config.get("target_modules", "all-linear"),
+            target_modules=["q_proj","k_proj","v_proj","o_proj",
+                            "gate_proj","up_proj","down_proj"],
         )
     else:
         from unsloth import FastLanguageModel
@@ -124,6 +125,7 @@ def train(model_key: str, data_file: str, output_dir: str, epochs: int = 3, lora
             use_gradient_checkpointing=model_config.get("use_gradient_checkpointing", "unsloth"),
             random_state=training_config.get("seed", 3407),
             max_seq_length=model_config["max_seq_length"],
+            use_rslora=model_config.get("use_rslora", False),
         )
     
     print(f"    ✓ LoRA configured (r={model_config['r']})")

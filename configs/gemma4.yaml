@@ -3,7 +3,14 @@
 # E4B works on free T4 (16GB VRAM)
 model:
   name: unsloth/gemma-4-E4B-it
-  target_modules: all-linear
+  target_modules:
+    - q_proj
+    - k_proj
+    - v_proj
+    - o_proj
+    - gate_proj
+    - up_proj
+    - down_proj
   r: 32
   lora_alpha: 64
   lora_dropout: 0
@@ -11,6 +18,7 @@ model:
   max_seq_length: 4096
   batch_size: 1
   load_in_4bit: true  # 4-bit QLoRA standardized; set false for 16-bit LoRA
+  use_rslora: false
   use_gradient_checkpointing: unsloth
 
 training:

@@ -1,6 +1,6 @@
 # AGENTS.md - Agent Instructions
 
-Fine-tuning pipeline for LLMs (Gemma 4 E4B, Qwen 3.5 4B/9B) targeting CTF and competitive programming. Unsloth + QLoRA on Google Colab T4 (16GB).
+Fine-tuning pipeline for LLMs (Gemma 4 E4B, Gemma 4 12B, Qwen 3.5 4B/9B) targeting CTF and competitive programming. Unsloth + QLoRA on Google Colab T4 (16GB).
 
 ## Quick Start
 
@@ -27,7 +27,7 @@ finetuning/
 │   ├── download_datasets.py # HuggingFace datasets
 │   └── process_data.py      # Alpaca → ChatML conversion
 ├── configs/
-│   ├── gemma4.yaml, qwen35.yaml, qwen35-4b.yaml
+│   ├── gemma4.yaml, gemma4-12b.yaml, qwen35.yaml, qwen35-4b.yaml
 ├── notebooks/
 │   └── qwen4b_self_contained.ipynb   # ONLY notebook — full pipeline
 ├── data/{raw,processed,merged}/       # gitignored
@@ -60,7 +60,7 @@ grep -c '"output": ""' data/merged/train.jsonl  # should be 0
 
 - **Use `uv run`** for Python scripts, never raw `python` (PEP 668)
 - **Use `colab-cli` skill** for all Colab integration — don't try raw ssh/Drive
-- **3 valid `--model` values**: `gemma4`, `qwen35`, `qwen35-4b` — exact match only
+- **4 valid `--model` values**: `gemma4`, `gemma4-12b`, `qwen35`, `qwen35-4b` — exact match only
 - **T4 16GB VRAM ceiling** — `batch_size=1`, `max_seq_length=4096` are mandatory
 - **Use `tqdm.notebook`** in Colab notebooks (not plain `tqdm`)
 - **One notebook only** (`qwen4b_self_contained.ipynb`) — the training-only variant was deleted
@@ -159,21 +159,49 @@ uv run src/process_data.py --merge --input data/processed --output data/merged
 ## Known Gotchas
 
 - **YAML `2e-4` parses as string** with PyYAML — cast to `float()` in code
-- **Fragile model matching**: use `if model_key == "gemma4":` not `"gemma" in model_key`
+- **Fragile model matching**: use `if model_key.startswith("gemma"):` not `"gemma" in model_key` (catches both gemma4 and gemma4-12b)
 - **CryptoHack/pwncollege repos extract 0 examples** — non-standard markdown, solution boundary detection misses them
 - **gmpy2 lives at `gmpy2/gmpy2`** on GitHub (not `pydata/gmpy2`)
 - **Qwen 3.5 has no pre-quantized bnb-4bit variants** — Unsloth applies 4-bit at runtime
-- **Full Gemma 4 12B doesn't fit on T4** — use `gemma4` (E4B variant) for T4
+- **Gemma 4 12B is tight on T4** — 4-bit QLoRA fits (~10-11GB) but with limited headroom. Use `gemma4` (E4B) for comfortable T4 training, `gemma4-12b` when more capacity needed
 - **Qwen 3.5 is multimodal** with 262K context
 - **Colab `colab upload` directory fails** — `colab exec` mkdir first, then upload individual files
 - **Large JSON single-call writes fail** with "Unterminated string" — use Python script to generate, or chunk via `edit`
 
 ## Model Configs
 
+4 models × 2 modes (fast/quality) = 8 configs in notebook MODEL_CONFIGS dict:
+
+| Model | Mode | r | alpha | seq_len | epochs | grad_accum | Notes |
+|-------|------|---|-------|---------|--------|------------|-------|
+| gemma4 | fast | 8 | 16 | 2048 | 1 | 4 | E4B, comfortable on T4 |
+| gemma4 | quality | 32 | 64 | 4096 | 2 | 8 | E4B, comfortable on T4 |
+| gemma4-12b | fast | 8 | 16 | 2048 | 1 | 4 | 12B, tight on T4 (~10-11GB) |
+| gemma4-12b | quality | 32 | 64 | 4096 | 2 | 8 | 12B, tight on T4 (~10-11GB) |
+| qwen35-4b | fast | 8 | 16 | 2048 | 1 | 4 | 4B, comfortable on T4 |
+| qwen35-4b | quality | 16 | 32 | 4096 | 2 | 4 | 4B, comfortable on T4 |
+| qwen35 | fast | 8 | 16 | 2048 | 1 | 4 | 9B, comfortable on T4 |
+| qwen35 | quality | 32 | 64 | 4096 | 2 | 8 | 9B, comfortable on T4 |
+
 To add a new model:
 1. Create `configs/<name>.yaml`
 2. Add entry under `models:` in `config.yaml`
-3. Run `./finetune.sh <name> --all`
+3. Add `(model, mode)` entries to notebook MODEL_CONFIGS dict
+4. Update `finetune.sh` model list + config upload line
+5. Run `./finetune.sh <name> --all`
+
+## Multi-GPU
+
+Unsloth supports multi-GPU via DDP (Distributed Data Parallel):
+```bash
+torchrun --nproc_per_node=2 src/train.py --model gemma4
+# or
+accelerate launch src/train.py --model gemma4
+```
+- ~linear throughput scaling per added GPU
+- Works with QLoRA (verified in Unsloth docs)
+- Free Colab/Kaggle have 1 GPU only — needs Colab Pro+ or paid cloud
+- `device_map="balanced"` splits model across GPUs if single GPU can't fit it
 
 ## Colab / `/ft-diag`
 

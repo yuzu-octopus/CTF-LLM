@@ -4,7 +4,14 @@
 # Model: google/gemma-4-12B-it (no pre-quantized variant from Unsloth)
 model:
   name: google/gemma-4-12B-it
-  target_modules: all-linear
+  target_modules:
+    - q_proj
+    - k_proj
+    - v_proj
+    - o_proj
+    - gate_proj
+    - up_proj
+    - down_proj
   r: 32
   lora_alpha: 64
   lora_dropout: 0
@@ -12,6 +19,7 @@ model:
   max_seq_length: 4096
   batch_size: 1
   load_in_4bit: true
+  use_rslora: false
   use_gradient_checkpointing: unsloth
 
 training:

@@ -9,7 +9,14 @@ models:
   gemma4:
     model:
       name: unsloth/gemma-4-E4B-it
-      target_modules: all-linear
+      target_modules:
+        - q_proj
+        - k_proj
+        - v_proj
+        - o_proj
+        - gate_proj
+        - up_proj
+        - down_proj
       r: 32
       lora_alpha: 64
       lora_dropout: 0
@@ -36,7 +43,14 @@ models:
   gemma4-12b:
     model:
       name: google/gemma-4-12B-it
-      target_modules: all-linear
+      target_modules:
+        - q_proj
+        - k_proj
+        - v_proj
+        - o_proj
+        - gate_proj
+        - up_proj
+        - down_proj
       r: 32
       lora_alpha: 64
       lora_dropout: 0
