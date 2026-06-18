@@ -37,10 +37,16 @@ def has_assistant(ex):
     return bool(msgs) and bool(msgs[-1].get('content'))
 
 
-def train(model_key: str, data_file: str, output_dir: str, epochs: int = 3):
+def train(model_key: str, data_file: str, output_dir: str, epochs: int = 3, lora_r: int = None, lora_alpha: int = None):
     config = load_config(model_key)
     model_config = config.get("model", config)
     training_config = config.get("training", {})
+    
+    # Override LoRA params if provided (used by two-stage training)
+    if lora_r is not None:
+        model_config['r'] = lora_r
+    if lora_alpha is not None:
+        model_config['lora_alpha'] = lora_alpha
     
     total_start = time.time()
     
@@ -208,6 +214,101 @@ def train(model_key: str, data_file: str, output_dir: str, epochs: int = 3):
     return model, tokenizer
 
 
+def train_two_stage(model_key: str, data_file: str, output_dir: str):
+    """Two-stage SFT: broad r=8 first, then sharp r=32 on curated subset."""
+    from pathlib import Path
+    import json as _json
+    
+    config = load_config(model_key)
+    model_config = config.get("model", config)
+    training_config = config.get("training", {})
+    
+    # === STAGE 1: Broad foundation (r=8, 1 epoch, full dataset) ===
+    print(f"\n{'='*60}")
+    print(f"  STAGE 1: Broad Foundation")
+    print(f"  LoRA r=8, alpha=16, 1 epoch, full dataset")
+    print(f"{'='*60}")
+    
+    stage1_config = {
+        "model": dict(model_config, r=8, lora_alpha=16),
+        "training": dict(training_config, num_train_epochs=1),
+    }
+    
+    stage1_dir = f"{output_dir}/stage1"
+    stage1_model, stage1_tokenizer = train(model_key, data_file, stage1_dir, epochs=1, lora_r=8, lora_alpha=16)
+    
+    # === STAGE 2: Sharp patterns (r=32, 2 epochs, curated subset) ===
+    print(f"\n{'='*60}")
+    print(f"  STAGE 2: Sharp Patterns")
+    print(f"  LoRA r=32, alpha=64, 2 epochs, curated subset")
+    print(f"{'='*60}")
+    
+    # Build curated subset: synthetic_rev_pwn + ctfdojo + top writeups
+    curated_file = f"{output_dir}/curated.jsonl"
+    _build_curated_subset(curated_file)
+    
+    stage2_dir = f"{output_dir}/stage2"
+    stage2_model, stage2_tokenizer = train(model_key, curated_file, stage2_dir, epochs=2, lora_r=32, lora_alpha=64)
+    
+    return stage2_model, stage2_tokenizer
+
+
+def _build_curated_subset(output_path: str):
+    """Build curated subset from synthetic + ctfdojo + top writeups."""
+    import json as _json
+    from pathlib import Path
+    
+    curated = []
+    
+    # 1. Add synthetic rev/pwn examples
+    try:
+        from src.synthetic_rev_pwn import SYNTHETIC_EXAMPLES
+        for ex in SYNTHETIC_EXAMPLES:
+            curated.append({
+                "instruction": ex["instruction"],
+                "input": ex.get("input", ""),
+                "output": ex["output"],
+                "category": ex.get("category", "rev/pwn"),
+                "source": "synthetic",
+            })
+        print(f"  Added {len(SYNTHETIC_EXAMPLES)} synthetic rev/pwn examples")
+    except ImportError:
+        print("  Warning: synthetic_rev_pwn not found, skipping")
+    
+    # 2. Add CTF-Dojo examples (if available)
+    ctfdojo_path = Path("data/raw/ctfdojo.jsonl")
+    if ctfdojo_path.exists():
+        with open(ctfdojo_path) as f:
+            for line in f:
+                ex = _json.loads(line)
+                curated.append(ex)
+        print(f"  Added {len(curated)} CTF-Dojo examples")
+    else:
+        print("  Warning: ctfdojo.jsonl not found, skipping")
+    
+    # 3. Add top 200 writeups from writeups.jsonl
+    writeups_path = Path("data/raw/writeups.jsonl")
+    if writeups_path.exists():
+        count = 0
+        with open(writeups_path) as f:
+            for line in f:
+                if count >= 200:
+                    break
+                ex = _json.loads(line)
+                # Only include writeups with code blocks (higher quality)
+                if "```" in ex.get("output", ""):
+                    curated.append(ex)
+                    count += 1
+        print(f"  Added {count} curated writeups (with code blocks)")
+    
+    # Save
+    Path(output_path).parent.mkdir(exist_ok=True)
+    with open(output_path, "w") as f:
+        for ex in curated:
+            f.write(_json.dumps(ex) + "\n")
+    print(f"  Total curated subset: {len(curated)} examples saved to {output_path}")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Unified CTF/Coding model fine-tuning")
     parser.add_argument("--model", choices=["gemma4", "qwen35", "qwen35-4b"], required=True,
@@ -218,6 +319,8 @@ def main():
                        help="Output directory (default: outputs/{model}-ctf)")
     parser.add_argument("--epochs", type=int, default=3,
                        help="Number of training epochs")
+    parser.add_argument("--two-stage", action="store_true",
+                       help="Enable two-stage training: broad r=8 first, then sharp r=32 on curated subset")
     args = parser.parse_args()
     
     output_dir = args.output or f"outputs/{args.model}-ctf"
@@ -226,9 +329,13 @@ def main():
     print(f"  CTF/Coding Fine-tuning Pipeline")
     print(f"  Model: {args.model}, Epochs: {args.epochs}")
     print(f"  Data: {args.data}")
+    print(f"  Two-stage: {args.two_stage}")
     print(f"{'='*50}")
     
-    train(args.model, args.data, output_dir, args.epochs)
+    if args.two_stage:
+        train_two_stage(args.model, args.data, output_dir)
+    else:
+        train(args.model, args.data, output_dir, args.epochs)
 
 
 if __name__ == "__main__":

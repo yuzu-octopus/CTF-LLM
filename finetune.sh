@@ -53,7 +53,10 @@ if [[ "$ACTION" == "--train" ]] || [[ "$ACTION" == "--all" ]]; then
     colab upload -s "$SESSION_NAME" configs/gemma4.yaml /content/configs/gemma4.yaml
     colab upload -s "$SESSION_NAME" configs/qwen35.yaml /content/configs/qwen35.yaml
     colab upload -s "$SESSION_NAME" configs/qwen35-4b.yaml /content/configs/qwen35-4b.yaml
-    colab exec -s "$SESSION_NAME" -f src/train.py --model "$MODEL"
+    # Optional: set TWO_STAGE=true to enable two-stage training
+    TWO_STAGE_FLAG=""
+    [[ "${TWO_STAGE:-false}" == "true" ]] && TWO_STAGE_FLAG="--two-stage"
+    colab exec -s "$SESSION_NAME" -f src/train.py --model "$MODEL" ${TWO_STAGE_FLAG:-}
 
     echo ""
     echo "Downloading models..."

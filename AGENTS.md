@@ -107,6 +107,21 @@ uv run src/process_data.py --input data/raw --output data/processed
 uv run src/process_data.py --merge --input data/processed --output data/merged
 ```
 
+### Two-stage training (experimental)
+
+The pipeline supports a two-stage training recipe:
+- **Stage 1**: r=8, 1 epoch on full dataset (broad foundation)
+- **Stage 2**: r=32, 2 epochs on curated subset (sharp patterns)
+
+Curated subset includes: synthetic rev/pwn + CTF-Dojo + top writeups with code blocks.
+
+To enable:
+```bash
+TWO_STAGE=true ./finetune.sh qwen35 --all
+# or manually:
+uv run src/train.py --model qwen35 --data data/merged/train.jsonl --two-stage
+```
+
 ### Build command (Full mode)
 
 ```bash
