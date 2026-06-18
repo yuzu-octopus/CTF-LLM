@@ -173,7 +173,7 @@ def extract_solution_text(content: str, category: str = "") -> str:
     solution = re.sub(r'\n{3,}', '\n\n', solution)
     solution = solution.strip()
     
-    if len(solution) > 3000:
+    if len(solution) > max_len:
         solution = solution[:max_len] + "..."
     return solution
 
@@ -460,16 +460,7 @@ def main():
     elif args.source == "all":
         build_writeups_dataset(f"{args.output_dir}/writeups.jsonl", args.max_per_repo)
         build_docs_dataset(f"{args.output_dir}/docs.jsonl", args.max_per_doc)
-    elif args.source == "merge":
-        print("\n=== Merging datasets ===")
-        files = [
-            f"{args.output_dir}/writeups.jsonl",
-            f"{args.output_dir}/docs.jsonl",
-            f"{args.output_dir}/opencode_reasoning.jsonl",
-            f"{args.output_dir}/fenrir_cybersecurity.jsonl",
-            f"{args.output_dir}/synthetic_rev_pwn.jsonl",
-        ]
-        merge_datasets(files, f"{args.output_dir}/merged_train.jsonl")
+
     
     elapsed = time.time() - start_time
     print(f"\n{'='*50}")
