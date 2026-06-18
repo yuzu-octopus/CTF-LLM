@@ -45,7 +45,7 @@ uv run src/download_datasets.py --dataset all --max-samples 100
 # Process data (with system prompts in messages — default)
 uv run src/process_data.py --input data/raw --output data/processed
 # Process data (skip system prompts — set at training time via chat_template)
-uv run src/process_data.py --input data/raw --output data/processed --skip-system-prompt
+uv run src/process_data.py --input data/raw --output data/processed --no-system-prompt
 uv run src/process_data.py --merge --input data/processed --output data/merged
 
 # Train
@@ -100,7 +100,7 @@ uv run python -c "from src.synthetic_rev_pwn import save_to_file; save_to_file('
 
 ```bash
 uv run src/build_dataset.py --source all --output-dir data/raw --max-per-repo 999999
-uv run src/process_data.py --input data/raw --output data/processed --skip-system-prompt
+uv run src/process_data.py --input data/raw --output data/processed --no-system-prompt
 uv run src/process_data.py --merge --input data/processed --output data/merged
 ```
 
@@ -127,7 +127,7 @@ uv run src/process_data.py --merge --input data/processed --output data/merged
 - Extraction uses MAX_OUTPUT_LEN instead of hardcoded 3000/2000/8000 truncation
 - Length filtering at training time (notebook Section 7.4) drops examples > max_seq_length tokens
 - The `is_ctf_content()` classifier in process_data.py checks the category field
-- `--skip-system-prompt` removes system prompts from per-example messages (saves ~6.2M chars for 17K examples); set the system prompt in `tokenizer.chat_template` at training time instead
+- `--no-system-prompt` removes system prompts from per-example messages (saves ~6.2M chars for 17K examples); set the system prompt in `tokenizer.chat_template` at training time instead
 
 ## Known Gotchas
 

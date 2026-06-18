@@ -32,14 +32,9 @@ def load_config(model_key: str, config_dir: str = "configs") -> dict:
     raise FileNotFoundError(f"No config found for model: {model_key}")
 
 
-def format_chat_template(examples, tokenizer):
-    """Format dataset using chat template"""
-    convos = examples["messages"]
-    texts = [
-        tokenizer.apply_chat_template(convo, tokenize=False, add_generation_prompt=False)
-        for convo in convos
-    ]
-    return {"text": texts}
+def has_assistant(ex):
+    msgs = ex.get('messages') or []
+    return bool(msgs) and bool(msgs[-1].get('content'))
 
 
 def train(model_key: str, data_file: str, output_dir: str, epochs: int = 3):
@@ -131,13 +126,13 @@ def train(model_key: str, data_file: str, output_dir: str, epochs: int = 3):
     print("\n  [4/5] Loading dataset...")
     step_start = time.time()
     dataset = load_dataset("json", data_files={"train": data_file}, split="train")
+    dataset = dataset.filter(has_assistant)
     print(f"    Dataset size: {len(dataset)} examples")
     
-    dataset = dataset.map(
-        lambda examples: format_chat_template(examples, tokenizer),
-        batched=True,
-    )
-    print(f"    ✓ Dataset formatted ({time.time() - step_start:.1f}s)")
+    split = dataset.train_test_split(test_size=0.1, seed=42)
+    train_dataset, eval_dataset = split["train"], split["test"]
+    print(f"    Train: {len(train_dataset)}, Eval: {len(eval_dataset)}")
+    print(f"    ✓ Dataset prepared ({time.time() - step_start:.1f}s)")
     
     # Step 5/5: Train
     print("\n  [5/5] Training...")
@@ -145,7 +140,8 @@ def train(model_key: str, data_file: str, output_dir: str, epochs: int = 3):
     
     trainer = SFTTrainer(
         model=model,
-        train_dataset=dataset,
+        train_dataset=train_dataset,
+        eval_dataset=eval_dataset,
         processing_class=tokenizer,
         args=SFTConfig(
             max_seq_length=model_config["max_seq_length"],
@@ -159,9 +155,14 @@ def train(model_key: str, data_file: str, output_dir: str, epochs: int = 3):
             optim=training_config.get("optim", "adamw_8bit"),
             seed=training_config.get("seed", 3407),
             save_strategy=training_config.get("save_strategy", "epoch"),
+            save_total_limit=training_config.get("save_total_limit", 1),
             fp16=not torch.cuda.is_bf16_supported(),
             bf16=torch.cuda.is_bf16_supported(),
-            dataset_text_field="text",
+            assistant_only_loss=True,
+            eval_strategy=training_config.get("eval_strategy", "steps"),
+            eval_steps=training_config.get("eval_steps", 100),
+            load_best_model_at_end=training_config.get("load_best_model_at_end", True),
+            metric_for_best_model=training_config.get("metric_for_best_model", "eval_loss"),
             report_to="none",
             packing=True,
         ),

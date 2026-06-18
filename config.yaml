@@ -25,6 +25,11 @@ models:
       gradient_accumulation_steps: 4
       optim: adamw_8bit
       seed: 3407
+      save_total_limit: 1
+      eval_strategy: steps
+      eval_steps: 100
+      load_best_model_at_end: true
+      metric_for_best_model: eval_loss
 
   qwen35:
     model:
@@ -52,6 +57,11 @@ models:
       gradient_accumulation_steps: 4
       optim: adamw_8bit
       seed: 3407
+      save_total_limit: 1
+      eval_strategy: steps
+      eval_steps: 100
+      load_best_model_at_end: true
+      metric_for_best_model: eval_loss
 
   qwen35-4b:
     model:
@@ -79,6 +89,11 @@ models:
       gradient_accumulation_steps: 4
       optim: adamw_8bit
       seed: 3407
+      save_total_limit: 1
+      eval_strategy: steps
+      eval_steps: 100
+      load_best_model_at_end: true
+      metric_for_best_model: eval_loss
 
 # Data configuration
 data:

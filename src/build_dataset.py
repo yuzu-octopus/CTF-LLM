@@ -419,17 +419,6 @@ def build_writeups_dataset(output_path: str, max_per_repo: int = 500):
             except Exception as e:
                 print(f"  ✗ {repo_name}: {e}")
     
-    print(f"\nLoading HuggingFace datasets...")
-    hf_datasets = [
-        ("kyleavery/picoctf", 500),
-        ("justinwangx/CTFtime", 2000),
-    ]
-    
-    for ds_name, max_samples in hf_datasets:
-        print(f"\n  Loading {ds_name}...")
-        examples = extract_from_huggingface(ds_name, max_samples)
-        all_examples.extend(examples)
-    
     Path(output_path).parent.mkdir(exist_ok=True)
     with open(output_path, "w") as f:
         for item in all_examples:
