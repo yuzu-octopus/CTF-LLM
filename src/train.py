@@ -81,6 +81,19 @@ def train(model_key: str, data_file: str, output_dir: str, epochs: int = 3, lora
     
     print(f"    ✓ Model loaded ({time.time() - step_start:.1f}s)")
     
+    # VRAM gate: Gemma 4 12B needs ≥20GB (L4/A100), T4 16GB will OOM
+    if model_key == "gemma4-12b" and torch.cuda.is_available():
+        vram_gb = torch.cuda.get_device_properties(0).total_memory / 1e9
+        gpu_name = torch.cuda.get_device_name(0)
+        if vram_gb < 20:
+            raise RuntimeError(
+                f"\n{'='*60}\n"
+                f"  Gemma 4 12B requires ≥20GB VRAM ({gpu_name}: {vram_gb:.1f}GB).\n"
+                f"  Use L4 (Colab Pro) or A100 for this model, OR\n"
+                f"  use --model gemma4 (E4B) for T4 training.\n"
+                f"{'='*60}"
+            )
+    
     # Step 2/5: Set up chat template
     print("\n  [2/5] Setting up chat template...")
     from unsloth import get_chat_template
