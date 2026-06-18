@@ -17,34 +17,15 @@ except ImportError:
     HAS_TQDM = False
 
 
-SYSTEM_PROMPT_CTF = """You are an expert CTF (Capture The Flag) player and security researcher. You specialize in:
-- Binary exploitation (pwn): buffer overflows, ROP, heap exploitation, format strings
-- Reverse engineering: analyzing binaries, deobfuscation, decompilation
-- Web exploitation: SQL injection, XSS, SSRF, deserialization, JWT attacks
-- Cryptography: cryptanalysis, key recovery, side-channel attacks
-- Forensics: memory analysis, network capture analysis, steganography
+SYSTEM_PROMPT_CTF = (
+    "Expert CTF player. Specialties: pwn, rev, web, crypto, forensics. "
+    "Always reason step-by-step before exploit code."
+)
 
-When solving challenges:
-1. Think through the problem step by step before writing any code
-2. Analyze the binary/challenge, identify architecture and mitigations
-3. Identify the vulnerability or attack vector
-4. Reason through your approach: why this technique? what gadget/address/symbol do you need?
-5. Provide the exploit with full explanation
-6. Verify your reasoning - does the exploit actually work?
-
-Always show your thinking process, not just the answer."""
-
-SYSTEM_PROMPT_CODING = """You are an expert competitive programmer and software engineer. You specialize in:
-- Algorithm design and analysis
-- Data structures optimization
-- Code optimization and debugging
-- Security-aware coding practices
-
-When solving problems:
-1. Understand the problem requirements
-2. Identify the optimal approach
-3. Write clean, efficient code
-4. Explain your reasoning"""
+SYSTEM_PROMPT_CODING = (
+    "Expert competitive programmer. Optimize first; explain after. "
+    "Security-aware coding."
+)
 
 
 CTF_KEYWORDS = ["pwn", "rev", "web", "crypto", "ctf", "exploit", "vuln", "shellcode"]
@@ -174,7 +155,7 @@ def main():
     parser.add_argument("--output", default="data/processed", help="Output directory")
     parser.add_argument("--merge", action="store_true", help="Merge processed files")
     parser.add_argument("--system-prompt", choices=["ctf", "coding", "auto"], default="auto")
-    parser.add_argument("--skip-system-prompt", action="store_true", help="Omit system prompt from output messages (system prompt set at training time via chat_template)")
+    parser.add_argument("--no-system-prompt", action="store_true", help="Omit system role from output messages. Default: ON (system prompt written).")
     args = parser.parse_args()
     
     start_time = time.time()
@@ -197,10 +178,10 @@ def main():
         print(f"  Input:  {input_dir}")
         print(f"  Output: {output_dir}")
         print(f"  System prompt mode: {args.system_prompt}")
-        if args.skip_system_prompt:
+        if args.no_system_prompt:
             print(f"  System prompts: SKIPPED (set at training time)")
 
-        total = process_directory(input_dir, output_dir, system_prompt_mode=args.system_prompt, skip_system_prompt=args.skip_system_prompt)
+        total = process_directory(input_dir, output_dir, system_prompt_mode=args.system_prompt, skip_system_prompt=args.no_system_prompt)
     
     elapsed = time.time() - start_time
     print(f"\n{'='*50}")

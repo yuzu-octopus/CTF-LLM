@@ -6,6 +6,7 @@ Usage:
   uv run src/build_dataset.py --source all
 """
 import json
+import os
 import re
 import argparse
 import hashlib
@@ -389,18 +390,34 @@ def build_writeups_dataset(output_path: str, max_per_repo: int = 500):
             status = "✓" if success else "✗"
             print(f"  {status} {repo['name']}")
 
-    # Phase 2: Extract from cloned repos sequentially (CPU-bound I/O)
-    for repo_idx, repo in enumerate(CTF_WRITEUP_REPOS):
+    # Phase 2: Extract from cloned repos in parallel (CPU-bound: markdown parsing + regex)
+    def _extract_repo(args):
+        repo_path, category, repo_name, repo_max = args
+        from src.build_dataset import extract_writeups_from_repo, dedup_examples
+        examples = extract_writeups_from_repo(repo_path, category, repo_name)
+        examples = dedup_examples(examples)
+        return examples[:repo_max], repo_name
+
+    extract_args = []
+    for repo in CTF_WRITEUP_REPOS:
         success, repo_path = clone_results[repo['name']]
         if success:
-            print(f"\n[{repo_idx + 1}/{total_repos}] Extracting from {repo['name']}...")
-            examples = extract_writeups_from_repo(repo_path, repo["category"], repo['name'])
-            examples = dedup_examples(examples)
             repo_max = repo.get("max_per_repo", max_per_repo)
-            examples = examples[:repo_max]
-            all_examples.extend(examples)
+            extract_args.append((repo_path, repo["category"], repo['name'], repo_max))
         else:
-            print(f"\n[{repo_idx + 1}/{total_repos}] Skipped {repo['name']} (clone failed)")
+            print(f"  Skipped {repo['name']} (clone failed)")
+
+    max_workers = min(os.cpu_count() or 4, 8)
+    print(f"\nExtracting from {len(extract_args)} repos in parallel (workers={max_workers})...")
+    with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as pool:
+        futures = {pool.submit(_extract_repo, args): args[2] for args in extract_args}
+        for future in concurrent.futures.as_completed(futures):
+            repo_name = futures[future]
+            try:
+                examples, _ = future.result()
+                all_examples.extend(examples)
+            except Exception as e:
+                print(f"  ✗ {repo_name}: {e}")
     
     print(f"\nLoading HuggingFace datasets...")
     hf_datasets = [
