@@ -122,13 +122,13 @@ colab stop -s finetune-<model>
 | Base model | `unsloth/gemma-4-E4B-it` | `unsloth/Qwen3.5-9B` | `unsloth/Qwen3.5-4B` |
 | Quantization | 16-bit LoRA | 4-bit QLoRA | 4-bit QLoRA |
 | LoRA rank | 32 | 32 | 8 |
-| LoRA alpha | 32 | 64 | 16 |
+| LoRA alpha | 64 | 64 | 16 |
 | Target modules | all-linear | q/k/v/o + gate/up/down | q/k/v/o + gate/up/down |
 | Max seq length | 4096 | 4096 | 4096 |
 | Batch size | 1 | 1 | 1 |
-| Gradient accum | 4 (effective = 4) | 4 (effective = 4) | 4 (effective = 4) |
+| Gradient accum | 4 (effective = 4) | 8 (effective = 8) | 4 (effective = 4) |
 | Epochs | 3 | 3 | 3 |
-| Learning rate | 2e-4 | 2e-4 | 2e-4 |
+| Learning rate | 1e-4 | 1e-4 | 1e-4 |
 | Optimizer | adamw_8bit | adamw_8bit | adamw_8bit |
 | Chat template | `gemma-4` | `chatml` | `chatml` |
 

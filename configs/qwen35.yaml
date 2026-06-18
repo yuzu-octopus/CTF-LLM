@@ -21,12 +21,14 @@ model:
 
 training:
   num_train_epochs: 3
-  learning_rate: 2e-4
-  warmup_steps: 10
+  learning_rate: 1.0e-4
+  warmup_ratio: 0.05
   gradient_accumulation_steps: 8
   optim: adamw_8bit
   seed: 3407
-  save_total_limit: 1
+  save_strategy: steps
+  save_steps: 100
+  save_total_limit: 2
   eval_strategy: steps
   eval_steps: 100
   load_best_model_at_end: true
