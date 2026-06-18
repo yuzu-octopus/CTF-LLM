@@ -169,6 +169,130 @@ def download_vulnerability(output_path="data/vulnerability_detection.jsonl", max
     return output_path
 
 
+def download_ctf_solver(output_path="data/raw/ctf_solver.jsonl", max_samples=10000):
+    """Download TrueNix/ctf-solver-dataset (CTF solver with solutions)"""
+    print("\n  [NEW] Downloading ctf-solver-dataset...")
+    start_time = time.time()
+    ds = load_dataset("TrueNix/ctf-solver-dataset", split="train")
+    
+    count = 0
+    data_iter = ds
+    if HAS_TQDM:
+        data_iter = tqdm(ds, total=min(len(ds), max_samples), desc="    ctf-solver", unit="row")
+    
+    with open(output_path, "w") as f:
+        for item in data_iter:
+            if count >= max_samples:
+                break
+            msgs = item.get("messages", [])
+            if len(msgs) >= 2:
+                instruction = msgs[0].get("content", "")
+                output = msgs[-1].get("content", "")
+                if instruction and output:
+                    f.write(json.dumps({
+                        "instruction": instruction,
+                        "input": "",
+                        "output": output
+                    }) + "\n")
+                    count += 1
+    
+    elapsed = time.time() - start_time
+    print(f"  ✓ ctf-solver: {count} examples ({elapsed:.1f}s)")
+    return output_path
+
+
+def download_summermc_ctf(output_path="data/raw/summermc_ctf.jsonl", max_samples=10000):
+    """Download SummerMC/CTF (structured CTF agent training data)"""
+    print("\n  [NEW] Downloading SummerMC/CTF...")
+    start_time = time.time()
+    ds = load_dataset("SummerMC/CTF", split="train")
+    
+    count = 0
+    data_iter = ds
+    if HAS_TQDM:
+        data_iter = tqdm(ds, total=min(len(ds), max_samples), desc="    summermc-ctf", unit="row")
+    
+    with open(output_path, "w") as f:
+        for item in data_iter:
+            if count >= max_samples:
+                break
+            task = item.get("task", "")
+            ground_truth = item.get("ground_truth", "")
+            if task and ground_truth:
+                f.write(json.dumps({
+                    "instruction": task[:3000],
+                    "input": "",
+                    "output": str(ground_truth)[:5000]
+                }) + "\n")
+                count += 1
+    
+    elapsed = time.time() - start_time
+    print(f"  ✓ summermc-ctf: {count} examples ({elapsed:.1f}s)")
+    return output_path
+
+
+def download_trendyol_cybersec(output_path="data/raw/trendyol_cybersec.jsonl", max_samples=10000):
+    """Download Trendyol cybersecurity instruction tuning dataset"""
+    print("\n  [NEW] Downloading Trendyol-Cybersecurity...")
+    start_time = time.time()
+    ds = load_dataset("Trendyol/Trendyol-Cybersecurity-Instruction-Tuning-Dataset", split="train")
+    
+    count = 0
+    data_iter = ds
+    if HAS_TQDM:
+        data_iter = tqdm(ds, total=min(len(ds), max_samples), desc="    trendyol-cyber", unit="row")
+    
+    with open(output_path, "w") as f:
+        for item in data_iter:
+            if count >= max_samples:
+                break
+            user = item.get("user", "")
+            assistant = item.get("assistant", "")
+            if user and assistant:
+                f.write(json.dumps({
+                    "instruction": user,
+                    "input": "",
+                    "output": assistant
+                }) + "\n")
+                count += 1
+    
+    elapsed = time.time() - start_time
+    print(f"  ✓ trendyol-cyber: {count} examples ({elapsed:.1f}s)")
+    return output_path
+
+
+def download_ctf_crypto_analysis(output_path="data/raw/ctf_crypto_analysis.jsonl", max_samples=5000):
+    """Download Sakana-ctf ctf-crypto-manual-analysis-benchmark"""
+    print("\n  [NEW] Downloading ctf-crypto-analysis...")
+    start_time = time.time()
+    ds = load_dataset("Sakana-ctf/ctf-crypto-manual-analysis-benchmark", split="train")
+    
+    count = 0
+    data_iter = ds
+    if HAS_TQDM:
+        data_iter = tqdm(ds, total=min(len(ds), max_samples), desc="    ctf-crypto", unit="row")
+    
+    with open(output_path, "w") as f:
+        for item in data_iter:
+            if count >= max_samples:
+                break
+            msgs = item.get("messages", [])
+            if len(msgs) >= 2:
+                instruction = msgs[0].get("content", "")
+                output = msgs[-1].get("content", "")
+                if instruction and output:
+                    f.write(json.dumps({
+                        "instruction": instruction,
+                        "input": "",
+                        "output": output
+                    }) + "\n")
+                    count += 1
+    
+    elapsed = time.time() - start_time
+    print(f"  ✓ ctf-crypto-analysis: {count} examples ({elapsed:.1f}s)")
+    return output_path
+
+
 def merge_datasets(input_files, output_path="data/merged_train.jsonl"):
     """Merge multiple JSONL files into one"""
     total = 0
@@ -187,8 +311,7 @@ def merge_datasets(input_files, output_path="data/merged_train.jsonl"):
 def main():
     parser = argparse.ArgumentParser(description="Download and prepare CTF/coding datasets")
     parser.add_argument("--dataset", choices=[
-        "ctf-webserver", "opencode-reasoning",
-        "fenrir", "vulnerability", "all", "merge"
+        "ctf-webserver", "opencode-reasoning", "fenrir", "ctf-solver", "summermc-ctf", "trendyol-cyber", "ctf-crypto-analysis", "all", "merge"
     ], required=True)
     parser.add_argument("--max-samples", type=int, default=10000)
     parser.add_argument("--output-dir", default="data/raw")
@@ -214,14 +337,20 @@ def main():
         download_ctf_webserver(f"{args.output_dir}/ctf_webserver.jsonl")
         download_opencode_reasoning(f"{args.output_dir}/opencode_reasoning.jsonl", args.max_samples)
         download_fenrir(f"{args.output_dir}/fenrir_cybersecurity.jsonl", args.max_samples)
-        download_vulnerability(f"{args.output_dir}/vulnerability_detection.jsonl", args.max_samples)
+        download_ctf_solver(f"{args.output_dir}/ctf_solver.jsonl", args.max_samples)
+        download_summermc_ctf(f"{args.output_dir}/summermc_ctf.jsonl", args.max_samples)
+        download_trendyol_cybersec(f"{args.output_dir}/trendyol_cybersec.jsonl", args.max_samples)
+        download_ctf_crypto_analysis(f"{args.output_dir}/ctf_crypto_analysis.jsonl", args.max_samples)
     elif args.dataset == "merge":
         print("\n=== Merging datasets ===")
         files = [
             f"{args.output_dir}/ctf_webserver.jsonl",
             f"{args.output_dir}/opencode_reasoning.jsonl",
             f"{args.output_dir}/fenrir_cybersecurity.jsonl",
-            f"{args.output_dir}/vulnerability_detection.jsonl",
+            f"{args.output_dir}/ctf_solver.jsonl",
+            f"{args.output_dir}/summermc_ctf.jsonl",
+            f"{args.output_dir}/trendyol_cybersec.jsonl",
+            f"{args.output_dir}/ctf_crypto_analysis.jsonl",
         ]
         merge_datasets(files, f"{args.output_dir}/merged_train.jsonl")
     
