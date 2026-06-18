@@ -181,7 +181,7 @@ def train(model_key: str, data_file: str, output_dir: str, epochs: int = 3, lora
             load_best_model_at_end=training_config.get("load_best_model_at_end", True),
             metric_for_best_model=training_config.get("metric_for_best_model", "eval_loss"),
             report_to="none",
-            packing=True,
+            # NO packing — conflicts with assistant_only_loss in trl>=0.12
         ),
     )
     

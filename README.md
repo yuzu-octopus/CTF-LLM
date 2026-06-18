@@ -49,7 +49,6 @@ Also downloads structured datasets from HuggingFace:
 | `nvidia/OpenCodeReasoning` | 735K samples | Competitive programming with reasoning traces |
 | `AlicanKiraz0/Cybersecurity-Dataset-Fenrir-v2.1` | 99.8K examples | Cybersecurity Q&A |
 | `Jacqkues/ctf_webserver_v0.1` | 340 samples | Web CTF challenges |
-| `kyleavery/picoctf` | 120 samples | picoCTF challenge solutions |
 
 ### 1.5 Synthetic Rev/PWN Examples (`src/synthetic_rev_pwn.py`)
 
