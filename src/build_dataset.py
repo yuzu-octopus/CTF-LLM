@@ -8,6 +8,7 @@ Usage:
 import json
 import re
 import argparse
+import hashlib
 import time
 from pathlib import Path
 import tempfile
@@ -30,6 +31,21 @@ except ImportError:
 
 # Generous safety cap for extraction length
 MAX_OUTPUT_LEN = 20000
+
+
+def dedup_examples(examples: list) -> list:
+    """Remove duplicates by hashing user content."""
+    seen = set()
+    unique = []
+    for ex in examples:
+        key = hashlib.md5(ex.get('input', ex.get('instruction', '')).encode()).hexdigest()
+        if key not in seen:
+            seen.add(key)
+            unique.append(ex)
+    dropped = len(examples) - len(unique)
+    if dropped > 0:
+        print(f"    Deduped: dropped {dropped} duplicates")
+    return unique
 
 
 # GitHub repos to scrape for CTF writeups
@@ -361,6 +377,7 @@ def build_writeups_dataset(output_path: str, max_per_repo: int = 500):
         if clone_repo(repo["url"], repo_path):
             print(f"  Extracting writeups from {repo['name']}...")
             examples = extract_writeups_from_repo(repo_path, repo["category"], repo['name'])
+            examples = dedup_examples(examples)
             repo_max = repo.get("max_per_repo", max_per_repo)
             examples = examples[:repo_max]
             all_examples.extend(examples)
