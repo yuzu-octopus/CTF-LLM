@@ -180,7 +180,7 @@ def main():
         merged_dir = Path("data/merged")
         merged_dir.mkdir(parents=True, exist_ok=True)
         
-        total = merge_jsonl_files(output_dir, merged_dir / "train.jsonl")
+        total = merge_jsonl_files(input_dir, merged_dir / "train.jsonl")
         print(f"  ✓ Merged {total} examples to data/merged/train.jsonl")
     else:
         print(f"\n=== Processing datasets ===")
