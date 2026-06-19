@@ -79,8 +79,8 @@ def _model_name(model_key: str) -> str:
 
 
 def generate_response(model, tokenizer, system_prompt: str, user_prompt: str,
-                      max_new_tokens: int = 512) -> str:
-    """Generate a response from the model."""
+                      max_new_tokens: int = 512, n_samples: int = 1) -> list[str]:
+    """Generate response(s) from the model. Returns list of responses."""
     messages = [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_prompt},
@@ -92,63 +92,118 @@ def generate_response(model, tokenizer, system_prompt: str, user_prompt: str,
     inputs = actual_tokenizer(input_text, return_tensors="pt").to(model.device)
     input_len = inputs["input_ids"].shape[-1]
 
-    with torch.no_grad():
-        outputs = model.generate(
-            **inputs,
-            max_new_tokens=max_new_tokens,
-            do_sample=False,  # greedy; kills sampling variance
-        )
-    response = actual_tokenizer.decode(outputs[0][input_len:], skip_special_tokens=True)
-    return response.strip()
+    responses = []
+    for _ in range(n_samples):
+        with torch.no_grad():
+            outputs = model.generate(
+                **inputs,
+                max_new_tokens=max_new_tokens,
+                do_sample=(n_samples > 1),
+                temperature=0.6 if n_samples > 1 else None,
+            )
+        responses.append(actual_tokenizer.decode(outputs[0][input_len:], skip_special_tokens=True).strip())
+    return responses
 
 
-def grade_flag(response: str, expected: str) -> bool:
+def grade_flag(response: str, expected: str) -> tuple[bool, str]:
     """Check if response contains the expected flag."""
     flags = re.findall(r'flag\{[^}]+\}', response)
-    return expected in flags
+    if not flags:
+        return False, "No flag{...} pattern found"
+    if expected in flags:
+        return True, f"Matched: {expected}"
+    return False, f"Found {flags} but expected {expected}"
 
 
-def grade_mcq(response: str, expected: str) -> bool:
+def grade_mcq(response: str, expected: str) -> tuple[bool, str]:
     """Check if response matches the expected MCQ answer."""
-    # Layered matcher: look for explicit answer patterns first
     pat = re.compile(r'(?i)(?:answer\s*(?:is|:)?\s*|\*?answer\*?\s*:?\s*|\()\s*([A-D])\b')
     m = pat.search(response)
     if m:
-        return m.group(1).upper() == expected.upper()
-    # Fallback: last A-D letter in response
+        correct = m.group(1).upper() == expected.upper()
+        return correct, f"Explicit match: {m.group(1).upper()} (expected {expected.upper()})"
     last = re.findall(r'(?i)\b([A-D])\b', response)
-    return bool(last) and last[-1].upper() == expected.upper()
+    if not last:
+        return False, "No A-D letter found"
+    correct = last[-1].upper() == expected.upper()
+    return correct, f"Last-letter fallback: {last[-1].upper()} (expected {expected.upper()})"
 
 
-def grade_code(response: str, reference: str = None) -> bool:
+def grade_code(response: str, reference: str = None, test_cases: list = None) -> tuple[bool, str]:
     """Check if response contains syntactically valid code with reference keywords."""
     code_blocks = re.findall(r'```(?:python|c|bash|py)?\n(.*?)```', response, re.DOTALL)
     if not code_blocks:
-        # Try to find code without markdown fences
         lines = response.split('\n')
         code_lines = [l for l in lines if any(kw in l for kw in ['import ', 'from ', 'def ', 'for ', 'if ', 'print(', 'p ='])]
         if code_lines:
             code_blocks = ['\n'.join(code_lines)]
 
     if not code_blocks:
-        return False
+        return False, "No code block found"
 
     candidate = code_blocks[0]
     try:
         compile(candidate.strip(), '<eval>', 'exec')
-    except SyntaxError:
-        return False
+    except SyntaxError as e:
+        return False, f"SyntaxError: {str(e)[:80]}"
 
-    if reference is None:
-        return True
+    # No test_cases: legacy reference-token fallback
+    if not test_cases:
+        if reference is None:
+            return True, "Syntax valid (no reference)"
+        needed = re.findall(r'[A-Za-z_][A-Za-z_0-9]{4,}', reference)
+        if any(tok in candidate for tok in needed[:3]):
+            return True, "Reference tokens matched"
+        return False, "Reference tokens not found"
 
-    # Require key tokens from reference to appear in generated code
-    needed = re.findall(r'[A-Za-z_][A-Za-z_0-9]{4,}', reference)
-    return any(tok in candidate for tok in needed[:3])
+    # Functional test cases
+    try:
+        local_env = {}
+        exec(candidate, {"__builtins__": {}}, local_env)
+        for i, tc in enumerate(test_cases):
+            if "setup" in tc:
+                exec(tc["setup"], {"__builtins__": {}}, local_env)
+            if not eval(tc["assert"], {"__builtins__": {}}, local_env):
+                return False, f"Test {i+1} failed: {tc['assert']}"
+        return True, f"All {len(test_cases)} tests passed"
+    except Exception as e:
+        return False, f"Runtime error: {str(e)[:80]}"
 
 
-def grade(challenge: dict, response: str) -> bool:
-    """Grade a response based on task type."""
+def grade_patch(response: str, banned: list = None, required: list = None) -> tuple[bool, str]:
+    """Grade a patch: check for banned tokens and required tokens."""
+    code_blocks = re.findall(r'```(?:python|c|bash|py)?\n(.*?)```', response, re.DOTALL)
+    candidate = code_blocks[0] if code_blocks else response
+
+    banned = banned or []
+    required = required or []
+
+    if any(t in candidate for t in banned):
+        return False, f"Used banned token: {next(t for t in banned if t in candidate)}"
+    if not all(t in candidate for t in required):
+        missing = [t for t in required if t not in candidate]
+        return False, f"Missing required: {missing}"
+    return True, "Patch passes token checks"
+
+
+def grade_vuln_id(response: str, expected: str) -> tuple[bool, str]:
+    """Grade vulnerability identification — reuse grade_mcq logic."""
+    return grade_mcq(response, expected)
+
+
+def grade_exploit_trace(response: str, required_steps: list = None) -> tuple[bool, str]:
+    """Grade exploit trace by checking for required steps."""
+    if not required_steps:
+        return True, "No steps required"
+
+    matched = sum(1 for step in required_steps if re.search(step, response, re.I))
+    if matched == len(required_steps):
+        return True, f"All {len(required_steps)} steps found"
+    return False, f"Found {matched}/{len(required_steps)} steps"
+
+
+def grade(challenge: dict, response: str) -> tuple[bool, str]:
+    """Grade a response based on task type. Returns (correct, feedback)."""
     task_type = challenge["task_type"]
     expected = challenge["expected"]
 
@@ -157,12 +212,45 @@ def grade(challenge: dict, response: str) -> bool:
     elif task_type == "multiple_choice":
         return grade_mcq(response, expected)
     elif task_type == "code_generation":
-        return grade_code(response, challenge.get("reference"))
-    return False
+        return grade_code(response, challenge.get("reference"), challenge.get("test_cases"))
+    elif task_type == "vulnerability_identification":
+        return grade_vuln_id(response, expected)
+    elif task_type == "patch_generation":
+        return grade_patch(response, challenge.get("banned_tokens"), challenge.get("required_tokens"))
+    elif task_type == "exploit_trace":
+        return grade_exploit_trace(response, challenge.get("required_steps"))
+    return False, f"Unknown task_type: {task_type}"
+
+
+SUSPICIOUS_MARKERS = [
+    "writeup from", "write-up", "originally by", "Author: ",
+    "HTB ", "Hack The Box", "from writeup", "picoCTF writeup",
+    "walkthrough", "solution from", "according to writeup",
+]
+
+
+import hashlib
+
+
+def check_contamination(benchmarks: list[dict]):
+    """Check for overlap between benchmark and training corpus."""
+    try:
+        train_path = Path(__file__).parent.parent / "data" / "merged" / "train.jsonl"
+        if not train_path.exists():
+            return
+        def _h(d): return hashlib.sha256((d.get("prompt", "") + d.get("instruction", "")).encode()).hexdigest()[:16]
+        bench_hashes = {_h(b) for b in benchmarks}
+        train_hashes = {_h(json.loads(l)) for l in open(train_path) if l.strip()}
+        overlap = bench_hashes & train_hashes
+        print(f"  Bench ∩ Train overlap: {len(overlap)}/{len(bench_hashes)} challenges")
+        if len(overlap) / max(len(bench_hashes), 1) > 0.05:
+            print("  ⚠  >5% of bench is in training corpus — scores may be inflated")
+    except Exception:
+        pass
 
 
 def run_evaluation(model_key: str, adapter_path: str, bench_path: str = None,
-                   category: str = None, difficulty: str = None) -> dict:
+                   category: str = None, difficulty: str = None, n_samples: int = 1) -> dict:
     """Run full evaluation and return results."""
     print(f"\nLoading model: {model_key}")
     t0 = time.time()
@@ -170,37 +258,56 @@ def run_evaluation(model_key: str, adapter_path: str, bench_path: str = None,
     print(f"  Model loaded in {time.time() - t0:.1f}s")
 
     benchmarks = load_benchmarks(bench_path)
+    check_contamination(benchmarks)
     if category:
         benchmarks = [b for b in benchmarks if b["category"] == category]
     if difficulty:
         benchmarks = [b for b in benchmarks if b["difficulty"] == difficulty]
 
-    print(f"  Running {len(benchmarks)} challenges...\n")
+    print(f"  Running {len(benchmarks)} challenges (k={n_samples})...\n")
     results = []
     for i, ch in enumerate(benchmarks):
         t0 = time.time()
-        response = generate_response(model, tokenizer, ch["system_prompt"], ch["prompt"])
-        correct = grade(ch, response)
+        responses = generate_response(model, tokenizer, ch["system_prompt"], ch["prompt"], n_samples=n_samples)
         elapsed = time.time() - t0
+
+        # Grade all samples, track which passed
+        any_correct = False
+        first_correct = False
+        feedbacks = []
+        for j, resp in enumerate(responses):
+            correct, fb = grade(ch, resp)
+            feedbacks.append(fb)
+            if correct:
+                any_correct = True
+                if j == 0:
+                    first_correct = True
+
+        cheated = any(m.lower() in responses[0].lower() for m in SUSPICIOUS_MARKERS)
 
         results.append({
             "id": ch["id"],
             "category": ch["category"],
             "difficulty": ch["difficulty"],
             "task_type": ch["task_type"],
-            "correct": correct,
-            "response": response,
+            "correct": first_correct,
+            "pass_at_k": any_correct,
+            "feedback": feedbacks[0] if feedbacks else "",
+            "response": responses[0],
+            "all_responses": responses if n_samples > 1 else [],
             "expected": ch["expected"],
             "time": elapsed,
+            "suspicious_memorization": cheated,
         })
 
-        mark = "✓" if correct else "✗"
+        mark = "✓" if first_correct else ("~" if any_correct else "✗")
         print(f"  [{i+1}/{len(benchmarks)}] {mark} {ch['id']} ({ch['difficulty']}) {elapsed:.1f}s")
 
     return {
         "model": model_key,
         "adapter": adapter_path,
         "results": results,
+        "n_samples": n_samples,
     }
 
 
@@ -222,11 +329,18 @@ def print_results(eval_result: dict):
     total = len(results)
     mean_lat = sum(r["time"] for r in results) / total if total else 0
 
+    # Pass@k stats
+    n_samples = eval_result.get("n_samples", 1)
+    pass_at_k = sum(1 for r in results if r.get("pass_at_k", r["correct"]))
+
     print(f"\n{'='*70}")
     print(f"CTF Evaluation Results")
     print(f"{'='*70}")
     print(f"Model:   {model_key}")
-    print(f"Dataset: {total} questions")
+    print(f"Dataset: {total} questions (k={n_samples})")
+    if n_samples > 1:
+        print(f"pass@1:  {total_correct}/{total} ({total_correct/total:.0%})")
+        print(f"pass@{n_samples}: {pass_at_k}/{total} ({pass_at_k/total:.0%})")
     print()
 
     # Bucket breakdown with Wilson CI
@@ -252,18 +366,49 @@ def print_results(eval_result: dict):
     lo, hi = wilson_ci(total_correct, total)
     print("-" * len(header))
     print(f"{'overall':<16} {total_correct/total:>4.0%} {total:>4} {lo:>6.0%} {hi:>6.0%} {mean_lat:>7.1f}s")
+
+    # Per-difficulty overall rows
+    for d in difficulties:
+        d_res = [r for r in results if r["difficulty"] == d]
+        if not d_res:
+            continue
+        d_cor = sum(1 for r in d_res if r["correct"])
+        lo, hi = wilson_ci(d_cor, len(d_res))
+        d_lat = sum(r["time"] for r in d_res) / len(d_res)
+        print(f"{'Overall ' + d:<16} {d_cor/len(d_res):>4.0%} {len(d_res):>4} {lo:>6.0%} {hi:>6.0%} {d_lat:>7.1f}s")
     print()
 
     # Per-question breakdown
     print("Per-question breakdown:")
     for r in results:
         mark = "✓" if r["correct"] else "✗"
-        print(f"  {mark} {r['id']:<12} ({r['difficulty']:<6}) ", end="")
-        if r["correct"]:
-            print(f"{r['expected']}")
-        else:
-            resp_preview = r['response'][:60].replace('\n', ' ')
-            print(f"got: \"{resp_preview}...\"")
+        print(f"  {mark} {r['id']:<12} ({r['difficulty']:<6}) {r.get('feedback', '')[:50]}")
+
+    # Length-bias probe
+    correct_lens = [len(r["response"]) for r in results if r["correct"]]
+    wrong_lens = [len(r["response"]) for r in results if not r["correct"]]
+    if correct_lens and wrong_lens:
+        mean_c = sum(correct_lens) / len(correct_lens)
+        mean_w = sum(wrong_lens) / len(wrong_lens)
+        ratio = mean_c / mean_w if mean_w > 0 else float('inf')
+        flag = " ⚠ length bias suspected" if ratio > 1.5 or ratio < 0.67 else " ✓ no obvious length bias"
+        print(f"\nLength-bias probe:")
+        print(f"  avg correct: {mean_c:.0f} chars | avg wrong: {mean_w:.0f} chars | ratio: {ratio:.2f}{flag}")
+
+    # Cheating detection
+    cheated = sum(1 for r in results if r.get("suspicious_memorization"))
+    if cheated:
+        print(f"  Suspicious memorization: {cheated}/{len(results)} ({cheated/len(results)*100:.0f}%)")
+
+    # Difficulty-balanced accuracy
+    all_buckets = [(r["category"], r["difficulty"]) for r in results]
+    unique_buckets = list(set(all_buckets))
+    bucket_accs = {}
+    for cat, diff in unique_buckets:
+        bq = [r for r in results if r["category"] == cat and r["difficulty"] == diff]
+        bucket_accs[(cat, diff)] = sum(1 for r in bq if r["correct"]) / len(bq)
+    balanced = sum(bucket_accs.values()) / len(bucket_accs) if bucket_accs else 0
+    print(f"  Balanced mean across {len(bucket_accs)} buckets: {balanced:.0%}")
 
 
 def print_comparison(eval_results: list[dict]):
@@ -374,6 +519,7 @@ def save_results(eval_results: list[dict], output_dir: str):
         correct = sum(1 for r in er["results"] if r["correct"])
         total = len(er["results"])
         lo, hi = wilson_ci(correct, total)
+        cheated = sum(1 for r in er["results"] if r.get("suspicious_memorization"))
         data["results"].append({
             "model": er["model"],
             "adapter": er["adapter"],
@@ -381,6 +527,7 @@ def save_results(eval_results: list[dict], output_dir: str):
             "wilson_ci95": [lo, hi],
             "correct": correct,
             "total": total,
+            "suspicious_memorization": cheated,
             "questions": er["results"],
         })
 
@@ -403,6 +550,8 @@ def main():
     parser.add_argument("--compare", nargs="+", metavar="MODEL:ADAPTER",
                         help="Compare multiple models (e.g., gemma4:outputs/gemma4-ctf/lora qwen35:outputs/qwen35-ctf/lora)")
     parser.add_argument("--output", help="Directory to save results JSON (default: no save)")
+    parser.add_argument("--samples", type=int, default=1,
+                        help="Samples per prompt for pass@k (recommended: 3)")
 
     args = parser.parse_args()
 
@@ -410,11 +559,11 @@ def main():
         eval_results = []
         for spec in args.compare:
             model_key, adapter = spec.split(":", 1)
-            result = run_evaluation(model_key, adapter, args.bench, args.category, args.difficulty)
+            result = run_evaluation(model_key, adapter, args.bench, args.category, args.difficulty, args.samples)
             eval_results.append(result)
         print_comparison(eval_results)
     elif args.model:
-        result = run_evaluation(args.model, args.adapter or "", args.bench, args.category, args.difficulty)
+        result = run_evaluation(args.model, args.adapter or "", args.bench, args.category, args.difficulty, args.samples)
         eval_results = [result]
         print_results(result)
     else:
