@@ -98,22 +98,31 @@ Training outputs three model versions:
 
 ### 4. Model Evaluation (`src/eval.py`)
 
-Runs trained models against a built-in 50-question CTF benchmark and reports accuracy:
+Runs trained models against a 200-question CTF benchmark (50 per category) and reports accuracy with Wilson 95% confidence intervals:
 
 ```bash
 # Single model
 uv run src/eval.py --model gemma4 --adapter outputs/gemma4-ctf/lora
 
-# Compare models side-by-side
+# Compare models side-by-side (with McNemar's test)
 uv run src/eval.py --compare \
   gemma4:outputs/gemma4-ctf/lora \
   qwen35:outputs/qwen35-ctf/lora
 
 # Filter by category or difficulty
 uv run src/eval.py --model gemma4 --adapter outputs/gemma4-ctf/lora --category pwn --difficulty easy
+
+# Save results as JSON
+uv run src/eval.py --model gemma4 --adapter outputs/gemma4-ctf/lora --output data/eval/results/
 ```
 
 The benchmark covers 4 categories (pwn, rev, crypto, web) across 3 difficulty levels, with automatic grading for flag extraction, multiple choice, and code generation tasks.
+
+**Evaluator limitations** (N=200 gives ±7% margin of error):
+- `grade_code` validates syntax + reference keywords, not functional correctness
+- `grade_mcq` matches `Answer: X` / `(X)` / fallback last letter
+- `grade_flag` uses regex `flag\{[^}]+\}`
+- Results are indicative, not definitive — expand to N=500 for ±4% CI
 
 ### 5. Colab Integration (`finetune.sh`)
 
@@ -146,7 +155,7 @@ finetuning/
 │   ├── build_dataset.py     # Scrapes GitHub repos for writeups
 │   ├── download_datasets.py # Downloads HuggingFace datasets
 │   ├── process_data.py      # Converts data to chat format
-│   └── eval.py              # CTF model evaluator (50-question benchmark)
+│   └── eval.py              # CTF model evaluator (200-question benchmark)
 │
 ├── configs/                 # Model-specific configurations (3 total)
 │   ├── gemma4.yaml          # Gemma 4 E4B settings

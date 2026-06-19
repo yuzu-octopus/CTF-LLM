@@ -78,6 +78,7 @@ grep -c '"output": ""' data/merged/train.jsonl  # should be 0
 - **One notebook only** (`qwen4b_self_contained.ipynb`) — the training-only variant was deleted
 - **Notebook approach for training**, not `colab exec` — long-running training (model load + 3 epochs) hits Colab session timeout
 - **Distill-first policy** — check existing skills/commands before creating new ones
+- **`eval.py` limitations** — `grade_code` validates syntax + reference tokens (not functional correctness). `grade_mcq` matches `Answer: X` / `(X)` / fallback last letter; lowercases accepted. `grade_flag` uses regex `flag\{[^}]+\}`. Numbers < 5 per cell are noisy. N=200 gives ±7% CI (Wilson 95%).
 
 ## Dataset: Fast vs Full Mode
 
