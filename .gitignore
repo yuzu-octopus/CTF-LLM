@@ -4,6 +4,7 @@ data/processed/
 data/merged/
 *.jsonl
 *.parquet
+!data/eval/ctf_bench.jsonl
 
 # Model outputs (large, regenerable)
 outputs/

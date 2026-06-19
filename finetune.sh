@@ -1,6 +1,6 @@
 #!/bin/bash
 # Main entry point for fine-tuning
-# Usage: ./finetune.sh [gemma4|gemma4-12b|qwen35|qwen35-4b] [--build-data] [--train] [--all]
+# Usage: ./finetune.sh [gemma4|gemma4-12b|qwen35|qwen35-4b] [--build-data] [--train] [--eval] [--all]
 
 set -euo pipefail
 
@@ -67,6 +67,19 @@ if [[ "$ACTION" == "--train" ]] || [[ "$ACTION" == "--all" ]]; then
     echo ""
     echo "Stopping session..."
     colab stop -s "$SESSION_NAME"
+fi
+
+# Evaluate if requested
+if [[ "$ACTION" == "--eval" ]]; then
+    echo ""
+    echo "[1/1] Running CTF evaluation..."
+    ADAPTER="outputs/${MODEL}-ctf/lora"
+    if [[ ! -d "$ADAPTER" ]]; then
+        echo "ERROR: No adapter found at $ADAPTER"
+        echo "       Train first with: ./finetune.sh $MODEL --train"
+        exit 1
+    fi
+    uv run src/eval.py --model "$MODEL" --adapter "$ADAPTER"
 fi
 
 echo ""

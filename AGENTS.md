@@ -51,6 +51,14 @@ uv run src/process_data.py --merge --input data/processed --output data/merged
 # Train
 uv run src/train.py --model gemma4 --data data/merged/train.jsonl
 
+# Evaluate
+uv run src/eval.py --model gemma4 --adapter outputs/gemma4-ctf/lora
+uv run src/eval.py --compare gemma4:outputs/gemma4-ctf/lora qwen35:outputs/qwen35-ctf/lora
+uv run src/eval.py --model gemma4 --adapter outputs/gemma4-ctf/lora --category pwn --difficulty easy
+
+# Via finetune.sh
+./finetune.sh gemma4 --eval
+
 # Verify output
 head -1 data/merged/train.jsonl | python -m json.tool
 grep -c '"output": ""' data/merged/train.jsonl  # should be 0
