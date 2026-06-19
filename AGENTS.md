@@ -1,4 +1,4 @@
-# AGENTS.md - Agent Instructions
+# CTF-LLM
 
 Fine-tuning pipeline for LLMs (Gemma 4 E4B, Gemma 4 12B, Qwen 3.5 4B/9B) targeting CTF and competitive programming. Unsloth + QLoRA on Google Colab T4 (16GB).
 

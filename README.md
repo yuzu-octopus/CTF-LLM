@@ -1,4 +1,4 @@
-# Fine-tuning LLMs for CTF & Competitive Programming
+# CTF-LLM
 
 Fine-tune open-source LLMs (Gemma 4 E4B, Qwen 3.5 9B/4B) to excel at cybersecurity CTF challenges and competitive programming using [Unsloth](https://unsloth.ai) with QLoRA on Google Colab's free tier.
 
