@@ -9,6 +9,7 @@ uv sync
 ./finetune.sh gemma4 --all          # build data + train
 ./finetune.sh gemma4 --build-data   # data only
 ./finetune.sh gemma4 --train        # train only (data must exist)
+./finetune.sh gemma4 --eval         # evaluate trained model
 ```
 
 `finetune.sh` is the entry point — don't bypass it. Default model is `gemma4`.
@@ -25,7 +26,10 @@ finetuning/
 │   ├── train.py             # Unified training (reads configs/*.yaml)
 │   ├── build_dataset.py     # GitHub scraping (writeups, docs)
 │   ├── download_datasets.py # HuggingFace datasets
-│   └── process_data.py      # Alpaca → ChatML conversion
+│   ├── process_data.py      # Alpaca → ChatML conversion
+│   └── eval.py              # CTF model evaluator (50-question benchmark)
+├── data/eval/
+│   └── ctf_bench.jsonl      # 50 curated CTF challenges (pwn/rev/crypto/web)
 ├── configs/
 │   ├── gemma4.yaml, gemma4-12b.yaml, qwen35.yaml, qwen35-4b.yaml
 ├── notebooks/

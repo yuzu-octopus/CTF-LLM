@@ -27,6 +27,7 @@ uv sync
 # Or run steps individually
 ./finetune.sh gemma4 --build-data  # Just build datasets
 ./finetune.sh gemma4 --train       # Just train (requires data)
+./finetune.sh gemma4 --eval        # Evaluate trained model
 ```
 
 ## How It Works
@@ -95,7 +96,26 @@ Training outputs three model versions:
 - `gguf/` - GGUF format (for llama.cpp, Ollama, local inference)
 - `merged/` - Full merged model (for HuggingFace, vLLM)
 
-### 4. Colab Integration (`finetune.sh`)
+### 4. Model Evaluation (`src/eval.py`)
+
+Runs trained models against a built-in 50-question CTF benchmark and reports accuracy:
+
+```bash
+# Single model
+uv run src/eval.py --model gemma4 --adapter outputs/gemma4-ctf/lora
+
+# Compare models side-by-side
+uv run src/eval.py --compare \
+  gemma4:outputs/gemma4-ctf/lora \
+  qwen35:outputs/qwen35-ctf/lora
+
+# Filter by category or difficulty
+uv run src/eval.py --model gemma4 --adapter outputs/gemma4-ctf/lora --category pwn --difficulty easy
+```
+
+The benchmark covers 4 categories (pwn, rev, crypto, web) across 3 difficulty levels, with automatic grading for flag extraction, multiple choice, and code generation tasks.
+
+### 5. Colab Integration (`finetune.sh`)
 
 Automates the entire workflow using the `colab` CLI:
 
@@ -125,22 +145,24 @@ finetuning/
 │   ├── train.py             # Unified training script (reads configs/*.yaml)
 │   ├── build_dataset.py     # Scrapes GitHub repos for writeups
 │   ├── download_datasets.py # Downloads HuggingFace datasets
-│   └── process_data.py      # Converts data to chat format
+│   ├── process_data.py      # Converts data to chat format
+│   └── eval.py              # CTF model evaluator (50-question benchmark)
 │
 ├── configs/                 # Model-specific configurations (3 total)
 │   ├── gemma4.yaml          # Gemma 4 E4B settings
+│   ├── gemma4-12b.yaml      # Gemma 4 12B settings
 │   ├── qwen35.yaml          # Qwen 3.5 9B settings
 │   └── qwen35-4b.yaml       # Qwen 3.5 4B settings
 │
 ├── notebooks/
 │   └── qwen4b_self_contained.ipynb  # ONLY notebook (full pipeline)
 │
-└── data/                    # Training data (gitignored)
-    ├── writeups.jsonl       # GitHub writeup scrape (data/ root)
-    ├── docs.jsonl           # GitHub docs scrape (data/ root)
-    ├── raw/                 # HuggingFace downloads
-    ├── processed/           # Converted to chat format
-    └── merged/              # Final merged training file (train.jsonl)
+├── data/
+│   ├── eval/
+│   │   └── ctf_bench.jsonl  # 50 curated CTF challenges (evaluation)
+│   ├── raw/                 # HuggingFace downloads (gitignored)
+│   ├── processed/           # Converted to chat format (gitignored)
+│   └── merged/              # Final merged training file (gitignored)
 ```
 
 ## Configuration
