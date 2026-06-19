@@ -81,9 +81,7 @@ def generate_response(model, tokenizer, system_prompt: str, user_prompt: str,
         outputs = model.generate(
             **inputs,
             max_new_tokens=max_new_tokens,
-            temperature=0.7,
-            top_p=0.8,
-            top_k=20,
+            do_sample=False,  # greedy; kills sampling variance
         )
     response = actual_tokenizer.decode(outputs[0][input_len:], skip_special_tokens=True)
     return response.strip()
@@ -97,12 +95,18 @@ def grade_flag(response: str, expected: str) -> bool:
 
 def grade_mcq(response: str, expected: str) -> bool:
     """Check if response matches the expected MCQ answer."""
-    match = re.search(r'\b([A-D])\b', response)
-    return bool(match and match.group(1) == expected)
+    # Layered matcher: look for explicit answer patterns first
+    pat = re.compile(r'(?i)(?:answer\s*(?:is|:)?\s*|\*?answer\*?\s*:?\s*|\()\s*([A-D])\b')
+    m = pat.search(response)
+    if m:
+        return m.group(1).upper() == expected.upper()
+    # Fallback: last A-D letter in response
+    last = re.findall(r'(?i)\b([A-D])\b', response)
+    return bool(last) and last[-1].upper() == expected.upper()
 
 
 def grade_code(response: str, reference: str = None) -> bool:
-    """Check if response contains syntactically valid code."""
+    """Check if response contains syntactically valid code with reference keywords."""
     code_blocks = re.findall(r'```(?:python|c|bash|py)?\n(.*?)```', response, re.DOTALL)
     if not code_blocks:
         # Try to find code without markdown fences
@@ -111,13 +115,21 @@ def grade_code(response: str, reference: str = None) -> bool:
         if code_lines:
             code_blocks = ['\n'.join(code_lines)]
 
-    for block in code_blocks:
-        try:
-            compile(block.strip(), '<eval>', 'exec')
-            return True
-        except SyntaxError:
-            continue
-    return False
+    if not code_blocks:
+        return False
+
+    candidate = code_blocks[0]
+    try:
+        compile(candidate.strip(), '<eval>', 'exec')
+    except SyntaxError:
+        return False
+
+    if reference is None:
+        return True
+
+    # Require key tokens from reference to appear in generated code
+    needed = re.findall(r'[A-Za-z_][A-Za-z_0-9]{4,}', reference)
+    return any(tok in candidate for tok in needed[:3])
 
 
 def grade(challenge: dict, response: str) -> bool:
