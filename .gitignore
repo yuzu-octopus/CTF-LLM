@@ -1,10 +1,10 @@
-# Data and datasets (large, regenerable)
+# Training data (large, regenerable)
 data/raw/
 data/processed/
 data/merged/
-*.jsonl
-*.parquet
-!data/eval/ctf_bench.jsonl
+data/*.jsonl
+data/*.parquet
+!data/eval/
 
 # Model outputs (large, regenerable)
 outputs/
@@ -17,30 +17,15 @@ outputs/
 # Python
 __pycache__/
 *.pyc
-*.pyo
-*.pyd
-.venv/
-venv/
-env/
+*.venv/
 
-# Secrets and environment
-.env
-.env.local
-
-# OS and editor
+# OS / editor
 .DS_Store
 .vscode/
 .idea/
-*.swp
-*.swo
 
-# Tooling caches
+# Tooling
+.mimocode/plans/
+.mimocode/node_modules/
 .playwright-mcp/
 .pytest_cache/
-.ruff_cache/
-.mypy_cache/
-
-# Build artifacts
-*.egg-info/
-build/
-dist/
