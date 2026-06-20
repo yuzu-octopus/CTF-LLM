@@ -256,11 +256,6 @@ def train_two_stage(model_key: str, data_file: str, output_dir: str):
     print(f"  LoRA r=8, alpha=16, 1 epoch, full dataset")
     print(f"{'='*60}")
     
-    stage1_config = {
-        "model": dict(model_config, r=8, lora_alpha=16),
-        "training": dict(training_config, num_train_epochs=1),
-    }
-    
     stage1_dir = f"{output_dir}/stage1"
     stage1_model, stage1_tokenizer = train(model_key, data_file, stage1_dir, epochs=1, lora_r=8, lora_alpha=16)
     

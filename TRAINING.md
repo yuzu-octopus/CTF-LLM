@@ -2,7 +2,7 @@
 
 ## Overview
 
-Fine-tune a model (Gemma 4 E4B, Qwen 3.5 9B, or Qwen 3.5 4B) for CTF/coding tasks
+Fine-tune a model (Gemma 4 E4B, Gemma 4 12B, Qwen 3.5 9B, or Qwen 3.5 4B) for CTF/coding tasks
 using Unsloth with QLoRA on Google Colab's free T4 GPU. The training flow is
 identical across models — only the `--model` flag changes.
 
@@ -117,19 +117,19 @@ colab stop -s finetune-<model>
 
 ## Training Config by Model
 
-| Parameter | Gemma 4 E4B | Qwen 3.5 9B | Qwen 3.5 4B |
-|-----------|-------------|-------------|-------------|
-| Base model | `unsloth/gemma-4-E4B-it` | `unsloth/Qwen3.5-9B` | `unsloth/Qwen3.5-4B` |
-| Quantization | 16-bit LoRA | 4-bit QLoRA | 4-bit QLoRA |
-| LoRA rank | 32 | 32 | 8 |
-| LoRA alpha | 64 | 64 | 16 |
-| Target modules | all-linear | q/k/v/o + gate/up/down | q/k/v/o + gate/up/down |
-| Max seq length | 4096 | 4096 | 4096 |
-| Batch size | 1 | 1 | 1 |
-| Gradient accum | 4 (effective = 4) | 8 (effective = 8) | 4 (effective = 4) |
-| Epochs | 3 | 3 | 3 |
-| Learning rate | 1e-4 | 1e-4 | 1e-4 |
-| Optimizer | adamw_8bit | adamw_8bit | adamw_8bit |
+| Parameter | Gemma 4 E4B | Gemma 4 12B | Qwen 3.5 9B | Qwen 3.5 4B |
+|-----------|-------------|-------------|-------------|-------------|
+| Base model | `unsloth/gemma-4-E4B-it` | `google/gemma-4-12B-it` | `unsloth/Qwen3.5-9B` | `unsloth/Qwen3.5-4B` |
+| Quantization | 4-bit QLoRA | 4-bit QLoRA | 4-bit QLoRA | 4-bit QLoRA |
+| LoRA rank | 32 | 32 | 32 | 8 |
+| LoRA alpha | 64 | 64 | 64 | 16 |
+| Target modules | q/k/v/o + gate/up/down | q/k/v/o + gate/up/down | q/k/v/o + gate/up/down | q/k/v/o + gate/up/down |
+| Max seq length | 4096 | 4096 | 4096 | 4096 |
+| Batch size | 1 | 1 | 1 | 1 |
+| Gradient accum | 4 (effective = 4) | 8 (effective = 8) | 8 (effective = 8) | 4 (effective = 4) |
+| Epochs | 3 | 3 | 3 | 3 |
+| Learning rate | 1e-4 | 1e-4 | 1e-4 | 1e-4 |
+| Optimizer | adamw_8bit | adamw_8bit | adamw_8bit | adamw_8bit |
 | Chat template | `gemma-4` | `chatml` | `chatml` |
 
 ## Expected Outputs
@@ -167,7 +167,7 @@ session alive and lets you see loss curves.
 - Reduce `max_seq_length` in the model config (try 2048)
 - Keep `batch_size: 1`
 - Ensure `use_gradient_checkpointing: unsloth`
-- For Gemma 4, confirm `load_in_4bit: false` (E4B uses 16-bit LoRA, not QLoRA)
+- All models use 4-bit QLoRA by default — check `load_in_4bit: true` in config
 - Full Gemma 4 12B does not fit on T4 — use the E4B variant
 
 ### Session timeout

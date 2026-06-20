@@ -529,7 +529,7 @@ def merge_datasets(input_files: list, output_path: str):
 
 def main():
     parser = argparse.ArgumentParser(description="Build custom CTF/coding datasets")
-    parser.add_argument("--source", choices=["writeups", "docs", "ctfd", "all", "merge"], required=True)
+    parser.add_argument("--source", choices=["writeups", "docs", "ctfd", "all"], required=True)
     parser.add_argument("--output-dir", default="data/raw")
     parser.add_argument("--max-per-repo", type=int, default=500)
     parser.add_argument("--max-per-doc", type=int, default=200)

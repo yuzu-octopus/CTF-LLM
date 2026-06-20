@@ -187,13 +187,14 @@ models:
   gemma4:
     name: unsloth/gemma-4-E4B-it
     r: 32                    # LoRA rank
-    lora_alpha: 32           # LoRA scaling
+    lora_alpha: 64           # LoRA scaling
     max_seq_length: 4096    # Max token length (limited by T4 VRAM)
     batch_size: 1           # Batch size (limited by T4 VRAM)
+    load_in_4bit: true      # 4-bit QLoRA
     
 training:
   num_train_epochs: 3
-  learning_rate: 2e-4
+  learning_rate: 1.0e-4
   gradient_accumulation_steps: 4
 ```
 
@@ -205,9 +206,16 @@ Individual model configurations that override main config:
 # configs/gemma4.yaml
 model:
   name: unsloth/gemma-4-E4B-it
-  target_modules: all-linear  # Apply LoRA to all linear layers
+  target_modules:
+    - q_proj
+    - k_proj
+    - v_proj
+    - o_proj
+    - gate_proj
+    - up_proj
+    - down_proj
   r: 32
-  lora_alpha: 32
+  lora_alpha: 64
 ```
 
 ## Adding a New Model

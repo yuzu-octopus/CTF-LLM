@@ -41,41 +41,14 @@ def wilson_ci(count: int, n: int, z: float = 1.96) -> tuple[float, float]:
 
 def load_model(model_key: str, adapter_path: str):
     """Load model with LoRA adapter for inference."""
-    from unsloth import get_chat_template
-
-    if model_key.startswith("gemma"):
-        from unsloth import FastVisionModel
-        model, processor = FastVisionModel.from_pretrained(
-            model_name=_model_name(model_key),
-            load_in_4bit=True,
-        )
-        processor = get_chat_template(processor, "gemma-4")
-        tokenizer = processor.tokenizer
-        model = FastVisionModel.get_for_inference(model)
-    else:
-        from unsloth import FastLanguageModel
-        model, tokenizer = FastLanguageModel.from_pretrained(
-            model_name=_model_name(model_key),
-            load_in_4bit=True,
-            dtype=None,
-        )
-        tokenizer = get_chat_template(tokenizer, "chatml")
-        model = FastLanguageModel.get_for_inference(model)
-
-    # Load LoRA adapter
-    if adapter_path and Path(adapter_path).exists():
-        from peft import PeftModel
-        model = PeftModel.from_pretrained(model, adapter_path)
-        print(f"  Loaded LoRA adapter from {adapter_path}")
-
-    return model, tokenizer
+    from src.model_utils import load_model_for_inference
+    return load_model_for_inference(model_key, adapter_path)
 
 
 def _model_name(model_key: str) -> str:
     """Map model key to HuggingFace model name."""
-    from src.train import load_config
-    config = load_config(model_key)
-    return config.get("model", config).get("name", model_key)
+    from src.model_utils import _model_name as _mn
+    return _mn(model_key)
 
 
 def generate_response(model, tokenizer, system_prompt: str, user_prompt: str,
@@ -156,14 +129,22 @@ def grade_code(response: str, reference: str = None, test_cases: list = None) ->
             return True, "Reference tokens matched"
         return False, "Reference tokens not found"
 
-    # Functional test cases
+    # Functional test cases — restricted exec with safe builtins
     try:
-        local_env = {}
-        exec(candidate, {"__builtins__": {}}, local_env)
+        safe_builtins = {
+            "range": range, "len": len, "int": int, "float": float,
+            "str": str, "bool": bool, "list": list, "dict": dict,
+            "tuple": tuple, "set": set, "print": print, "True": True,
+            "False": False, "None": None, "abs": abs, "min": min,
+            "max": max, "sum": sum, "sorted": sorted, "reversed": reversed,
+            "enumerate": enumerate, "zip": zip, "map": map, "filter": filter,
+        }
+        local_env = {"__builtins__": safe_builtins}
+        exec(candidate, local_env)
         for i, tc in enumerate(test_cases):
             if "setup" in tc:
-                exec(tc["setup"], {"__builtins__": {}}, local_env)
-            if not eval(tc["assert"], {"__builtins__": {}}, local_env):
+                exec(tc["setup"], local_env)
+            if not eval(tc["assert"], local_env):
                 return False, f"Test {i+1} failed: {tc['assert']}"
         return True, f"All {len(test_cases)} tests passed"
     except Exception as e:
@@ -466,7 +447,7 @@ def print_comparison(eval_results: list[dict]):
         if a_only + b_only > 0:
             chi2 = (abs(a_only - b_only) - 1)**2 / (a_only + b_only)
             # p-value from chi2 with 1 df (approximate)
-            p_value = math.exp(-chi2 / 2)  # rough approximation
+            p_value = math.erfc(math.sqrt(chi2 / 2))  # chi-squared survival, 1 df
         else:
             chi2 = 0.0
             p_value = 1.0

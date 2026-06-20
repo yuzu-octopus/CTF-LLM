@@ -75,6 +75,7 @@ def convert_alpaca_to_chat(instruction: str, input_text: str, output: str, categ
 def process_jsonl_file(input_path: Path, output_path: Path, system_prompt_mode: str = "auto", skip_system_prompt: bool = False) -> int:
     """Process a JSONL file and convert to chat format"""
     count = 0
+    skipped = 0
     with open(input_path) as f:
         total_lines = sum(1 for _ in f)
     start_time = time.time()
@@ -105,10 +106,15 @@ def process_jsonl_file(input_path: Path, output_path: Path, system_prompt_mode: 
                     fout.write(json.dumps(chat_data) + "\n")
                     count += 1
                 except Exception as e:
+                    skipped += 1
+                    if skipped <= 5:
+                        print(f"  Warning: skipped line {i+1}: {str(e)[:100]}")
                     continue
 
     elapsed = time.time() - start_time
     print(f"    ✓ {input_path.name}: {count}/{total_lines} examples ({elapsed:.1f}s)")
+    if skipped > 0:
+        print(f"    ⚠ {skipped}/{total_lines} lines skipped due to errors")
     return count
 
 
