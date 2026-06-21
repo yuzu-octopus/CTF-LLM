@@ -1,7 +1,7 @@
 # Plan 002: Eval Security + Correctness (1, 2)
 
 **Commit**: `5f04de4`  
-**Status**: TODO  
+**Status**: ✅ DONE (9b71fcc)  
 **Effort**: S (~20 min)  
 **Risk**: MED (security fix changes grading behavior)
 

@@ -1,7 +1,7 @@
 # Plan 005: Test Coverage (6, 7)
 
 **Commit**: `5f04de4`  
-**Status**: TODO  
+**Status**: ✅ DONE (9b71fcc)  
 **Effort**: M (~2 h)  
 **Risk**: LOW (adding tests only)
 

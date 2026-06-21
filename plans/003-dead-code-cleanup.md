@@ -1,7 +1,7 @@
 # Plan 003: Dead Code Cleanup (3, 4, N5)
 
 **Commit**: `5f04de4`  
-**Status**: TODO  
+**Status**: ✅ DONE (9b71fcc)  
 **Effort**: S (~15 min)  
 **Risk**: LOW (removing dead code)
 

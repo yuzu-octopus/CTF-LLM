@@ -1,40 +1,56 @@
 # Improvement Plans — CTF-LLM
 
-Generated from `/improve` audit against commit `5f04de4`.
+## Previous /improve cycle (all shipped)
 
-## Execution Order
+Generated from `/improve` audit against commit `5f04de4`. All 8 plans shipped in commit `9b71fcc`.
+
+| # | Plan | Status |
+|---|------|--------|
+| 1 | Notebook critical fixes (N1-N6) | ✅ DONE (`9b71fcc`) |
+| 2 | Eval security + correctness | ✅ DONE (`9b71fcc`) |
+| 3 | Dead code cleanup | ✅ DONE (`9b71fcc`) |
+| 4 | Model loading dedup | ✅ DONE (`9b71fcc`) |
+| 5 | Test coverage | ✅ DONE (`9b71fcc`) |
+| 6 | Docs stale values | ✅ DONE (`9b71fcc`) |
+| 7 | finetune.sh fixes | ✅ DONE (`9b71fcc`) |
+| 8 | Data quality hardening | ✅ DONE (`9b71fcc`) |
+
+## Current /improve cycle
+
+Generated from `/improve` audit against commit `6d7af02`. Flight plan: `fix_plan.md`.
+
+### Execution Order
 
 | # | Plan | Dependencies | Status |
 |---|------|-------------|--------|
-| 1 | Notebook critical fixes (N1-N6) | None | TODO |
-| 2 | Eval security + correctness (1, 2) | None | TODO |
-| 3 | Dead code cleanup (3, 4, N5) | None | TODO |
-| 4 | Model loading dedup (5) | None | TODO |
-| 5 | Test coverage (6, 7) | None | TODO |
-| 6 | Docs stale values (8, 9) | None | TODO |
-| 7 | finetune.sh fixes (10, 11) | None | TODO |
-| 8 | Data quality hardening (12, 13) | None | TODO |
+| 9 | Config drift fix (F3) | None | TODO |
+| 10 | Dead code cleanup (F5) | None | TODO |
+| 11 | Add OG image asset (F6) | None | TODO |
+| 12 | gen_eval_bench tests + docs (F1) | None | TODO |
+| 13 | CI pipeline (F2) | None | TODO |
+| 14 | Data pipeline test expansion (F4) | None | TODO |
+| 15 | eval.py orchestration tests (F7) | 015 depends on 013 (CI) for automation | TODO |
 
-## Findings Index
+### Dependency notes
+
+- Plans 9-11 are quick wins with no deps (~5-30 min each)
+- Plan 12 is highest leverage but requires careful subtask preservation
+- Plan 13 enables automated test running for all subsequent plans
+- Plan 15 has a `from src.eval import torch` barrier that may need resolving first
+
+### Findings Index
 
 | # | Finding | Plan | Confidence |
 |---|---------|------|------------|
-| N1 | notebook Cell 19: `hf_examples`/`doc_examples` undefined | 001 | HIGH |
-| N2 | notebook Cell 21: `use_rslora` missing for Gemma | 001 | HIGH |
-| N3 | notebook hardcoded `/content` paths | 001 | HIGH |
-| N4 | generator propagates broken Cell 19 | 001 | HIGH |
-| N5 | generator dead `extract_writeup` extraction | 003 | HIGH |
-| N6 | notebook Cell 21: `max_seq_length` missing for Gemma | 001 | MED |
-| 1 | eval.py exec sandbox escape | 002 | HIGH |
-| 2 | eval.py McNemar's p-value wrong | 002 | HIGH |
-| 3 | train.py stage1_config dead code | 003 | HIGH |
-| 4 | build_dataset.py --source merge no-op | 003 | HIGH |
-| 5 | eval.py/train.py model loading duplication | 004 | HIGH |
-| 6 | eval.py grading zero test coverage | 005 | HIGH |
-| 7 | build_dataset.py extraction zero test coverage | 005 | HIGH |
-| 8 | TRAINING.md wrong hyperparameters | 006 | HIGH |
-| 9 | README.md stale config examples | 006 | HIGH |
-| 10 | finetune.sh step numbering wrong | 007 | HIGH |
-| 11 | finetune.sh --eval not in --all | 007 | HIGH |
-| 12 | process_data.py silent exception swallowing | 008 | HIGH |
-| 13 | config.yaml epochs=3 disagrees with AGENTS.md | 008 | HIGH |
+| F1 | gen_eval_bench.py (745 LOC) — 0 tests, 0 doc refs | 012 | HIGH |
+| F2 | No CI pipeline | 013 | HIGH |
+| F3 | Config drift between config.yaml, configs/*.yaml, notebook | 009 | HIGH |
+| F4 | download_datasets.py untested; build_dataset.py under-tested | 014 | HIGH |
+| F5 | Dead code: extract_from_huggingface() in build_dataset.py | 010 | HIGH |
+| F6 | Missing og-image.png — OG tags return 404 | 011 | MED |
+| F7 | eval.py orchestration functions untested | 015 | MED |
+
+### Considered and rejected
+
+- **More sidebar CSS tuning**: Already iterated 5+ rounds; remaining differences (icon style, line-height) are within acceptable variance. Diminishing returns.
+- **Training pipeline tests (train.py)**: Requires GPU hardware ($250+/mo Colab Pro). Not testable in CI.

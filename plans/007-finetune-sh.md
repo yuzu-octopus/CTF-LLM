@@ -1,7 +1,7 @@
 # Plan 007: finetune.sh Fixes (10, 11)
 
 **Commit**: `5f04de4`  
-**Status**: TODO  
+**Status**: ✅ DONE (9b71fcc)  
 **Effort**: S (~15 min)  
 **Risk**: LOW (shell script changes)
 

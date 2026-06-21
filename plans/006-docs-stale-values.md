@@ -1,7 +1,7 @@
 # Plan 006: Docs Stale Values (8, 9)
 
 **Commit**: `5f04de4`  
-**Status**: TODO  
+**Status**: ✅ DONE (9b71fcc)  
 **Effort**: S (~20 min)  
 **Risk**: LOW (documentation only)
 

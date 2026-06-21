@@ -1,7 +1,7 @@
 # Plan 001: Notebook Critical Fixes (N1-N6)
 
 **Commit**: `5f04de4`  
-**Status**: TODO  
+**Status**: ✅ DONE (9b71fcc)  
 **Effort**: S (~30 min)  
 **Risk**: MED (notebook changes affect Colab users)
 

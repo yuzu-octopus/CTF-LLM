@@ -1,7 +1,7 @@
 # Plan 008: Data Quality Hardening (12, 13)
 
 **Commit**: `5f04de4`  
-**Status**: TODO  
+**Status**: ✅ DONE (9b71fcc)  
 **Effort**: S (~15 min)  
 **Risk**: LOW (error handling + config fix)
 

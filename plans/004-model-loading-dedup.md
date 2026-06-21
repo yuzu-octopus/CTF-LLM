@@ -1,7 +1,7 @@
 # Plan 004: Model Loading Dedup (5)
 
 **Commit**: `5f04de4`  
-**Status**: TODO  
+**Status**: ✅ DONE (9b71fcc)  
 **Effort**: M (~1 h)  
 **Risk**: MED (refactoring core loading logic)
 
