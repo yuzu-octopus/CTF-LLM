@@ -29,3 +29,8 @@ __pycache__/
 .mimocode/node_modules/
 .playwright-mcp/
 .pytest_cache/
+
+# Jekyll build artifacts (GitHub Pages)
+docs/_site/
+docs/.jekyll-cache/
+docs/.jekyll-metadata
