@@ -51,18 +51,18 @@
       border-right: 1px solid var(--muted);
       display: flex;
       flex-direction: column;
-      padding: 24px 16px;
+      padding: 16px;
       z-index: 100;
     }
 
     .sidebar-brand {
       text-align: center;
-      margin-bottom: 16px;
+      margin-bottom: 12px;
     }
 
     .sidebar-brand .logo {
-      width: 64px;
-      height: 64px;
+      width: 80px;
+      height: 80px;
       margin: 0 auto 8px;
       background: var(--purple);
       color: var(--bg);
@@ -70,7 +70,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 1.5rem;
+      font-size: 1.8rem;
       font-weight: 700;
     }
 
@@ -98,22 +98,29 @@
     }
 
     .sidebar-nav li {
-      margin: 2px 0;
+      margin: 1px 0;
     }
 
     .sidebar-nav a {
-      display: block;
+      display: flex;
+      align-items: center;
+      gap: 10px;
       padding: 8px 12px;
       color: var(--fg);
       font-size: 0.8rem;
-      border-left: 3px solid transparent;
-      transition: all 0.15s;
+      transition: background 0.15s;
+      text-decoration: none;
     }
 
     .sidebar-nav a:hover {
       background: var(--bg);
-      border-left-color: var(--purple);
       color: var(--purple);
+    }
+
+    .sidebar-nav a svg {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
     }
 
     .sidebar-footer {
@@ -132,25 +139,17 @@
       min-height: 100vh;
     }
 
-    /* Sections */
+    /* Sections — natural content flow, no min-height */
     section {
-      min-height: 100vh;
-      padding: 60px 40px;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
+      padding: 48px 40px;
     }
 
     .container {
       max-width: 900px;
       margin: 0 auto;
-      width: 100%;
     }
 
-    section:nth-child(odd) { background: var(--bg); }
-    section:nth-child(even) { background: var(--panel); }
-
-    /* Section heading */
+    /* Section heading — purple text with 2px bottom border */
     h2 {
       color: var(--purple);
       border-bottom: 2px solid var(--purple);
@@ -162,6 +161,7 @@
     /* Hero */
     .hero {
       text-align: center;
+      padding: 80px 40px 48px;
     }
 
     .hero h1 {
@@ -228,7 +228,7 @@
     }
 
     .card {
-      background: var(--bg);
+      background: var(--panel);
       border: 1px solid var(--muted);
       border-radius: 8px;
       padding: 20px;
@@ -250,13 +250,11 @@
       font-size: 0.8rem;
     }
 
-    .card .accent-cyan { color: var(--cyan); }
-
     /* Tables */
     table {
       width: 100%;
       border-collapse: collapse;
-      background: var(--bg);
+      background: var(--panel);
       border: 1px solid var(--muted);
       border-radius: 8px;
       overflow: hidden;
@@ -270,14 +268,14 @@
     }
 
     th {
-      background: var(--panel);
+      background: var(--bg);
       color: var(--fg);
       font-weight: 700;
     }
 
     tr:last-child td { border-bottom: none; }
 
-    tr:hover td { background: var(--panel); }
+    tr:hover td { background: var(--bg); }
 
     .status-comfortable { color: var(--green); }
     .status-tight { color: var(--orange); }
@@ -336,7 +334,7 @@
     }
 
     .stack .badge {
-      background: var(--bg);
+      background: var(--panel);
       border: 1px solid var(--muted);
       padding: 6px 12px;
       border-radius: 4px;
@@ -378,29 +376,50 @@
 </head>
 <body>
 
-<button class="mobile-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open'); document.querySelector('.main').classList.toggle('shifted');">☰</button>
+<button class="mobile-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open'); document.querySelector('.main').classList.toggle('shifted');">&#9776;</button>
 
 <aside class="sidebar">
   <div class="sidebar-brand">
     <div class="logo">C</div>
     <div class="name">CTF-LLM</div>
-    <div class="tagline">fine-tune · CTF · qLoRA</div>
+    <div class="tagline">fine-tune &middot; CTF &middot; qLoRA</div>
   </div>
   <hr class="sidebar-divider">
   <ul class="sidebar-nav">
-    <li><a href="#hero">Home</a></li>
-    <li><a href="#features">Features</a></li>
-    <li><a href="#models">Models</a></li>
-    <li><a href="#modes">Modes</a></li>
-    <li><a href="#benchmark">Benchmark</a></li>
-    <li><a href="#quickstart">Quick Start</a></li>
-    <li><a href="#stack">Stack</a></li>
+    <li><a href="#hero">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+      Home
+    </a></li>
+    <li><a href="#features">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+      Features
+    </a></li>
+    <li><a href="#models">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="2" x2="9" y2="4"></line><line x1="15" y1="2" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="22"></line><line x1="15" y1="20" x2="15" y2="22"></line><line x1="20" y1="9" x2="22" y2="9"></line><line x1="20" y1="15" x2="22" y2="15"></line><line x1="2" y1="9" x2="4" y2="9"></line><line x1="2" y1="15" x2="4" y2="15"></line></svg>
+      Models
+    </a></li>
+    <li><a href="#modes">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>
+      Modes
+    </a></li>
+    <li><a href="#benchmark">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line><line x1="3" y1="20" x2="21" y2="20"></line></svg>
+      Benchmark
+    </a></li>
+    <li><a href="#quickstart">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+      Quick Start
+    </a></li>
+    <li><a href="#stack">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+      Stack
+    </a></li>
   </ul>
   <hr class="sidebar-divider">
   <div class="sidebar-footer">
-    <a href="https://github.com/yuzu-octopus/CTF-LLM">GitHub</a>
-    <br><br>
-    Apache 2.0
+    &copy; 2026 yuzu-octopus<br>
+    Powered by <a href="https://pages.github.com/" target="_blank" rel="noopener noreferrer">GitHub Pages</a><br>
+    Made with <a href="https://vitejs.dev/" target="_blank" rel="noopener noreferrer">Vite</a>
   </div>
 </aside>
 
