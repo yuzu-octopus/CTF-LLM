@@ -83,6 +83,8 @@ Alpaca Format:                    ChatML Format:
 
 The system prompt is automatically selected based on the content category (CTF vs competitive programming).
 
+> **Tip:** pass `--no-system-prompt` to `process_data.py` to skip inlining per-example system prompts into the ChatML messages. Saves ~6.2M characters across a 17K-example corpus. The system prompt is then set once via `tokenizer.chat_template` at training time.
+
 ### 3. Model Training (`src/train.py`)
 
 Uses Unsloth's optimized QLoRA training:
@@ -98,7 +100,7 @@ Training outputs three model versions:
 
 ### 4. Model Evaluation (`src/eval.py`)
 
-Runs trained models against a 200-question CTF benchmark (50 per category) and reports accuracy with Wilson 95% confidence intervals:
+Runs trained models against a 210-question CTF benchmark (stratified pwn/rev/crypto/web × easy/medium/hard) and reports per-bucket accuracy with Wilson 95% confidence intervals:
 
 ```bash
 # Single model
@@ -116,13 +118,32 @@ uv run src/eval.py --model gemma4 --adapter outputs/gemma4-ctf/lora --category p
 uv run src/eval.py --model gemma4 --adapter outputs/gemma4-ctf/lora --output data/eval/results/
 ```
 
-The benchmark covers 4 categories (pwn, rev, crypto, web) across 3 difficulty levels, with automatic grading for flag extraction, multiple choice, and code generation tasks.
+The benchmark covers 4 categories (pwn, rev, crypto, web) across 3 difficulty levels. Six task types are auto-graded:
+- **flag_extraction** — regex match `flag\{[^}]+\}` against expected
+- **multiple_choice** — match `Answer: X` / `(X)` / fallback last letter (case-insensitive)
+- **code_generation** — extract fenced block, syntax-check, optional hidden test-case eval
+- **vulnerability_identification** — same as multiple_choice (MCQ-style A/B/C/D)
+- **patch_generation** — banned-token + required-token set checks
+- **exploit_trace** — required-step regex hits across response text
 
-**Evaluator limitations** (N=200 gives ±7% margin of error):
-- `grade_code` validates syntax + reference keywords, not functional correctness
+**Evaluator limitations** (N=210 gives ±6.8% margin of error per Wilson 95% CI):
+- `grade_code` validates syntax + reference keywords (or hidden test cases; not network-bound exploit exec)
 - `grade_mcq` matches `Answer: X` / `(X)` / fallback last letter
 - `grade_flag` uses regex `flag\{[^}]+\}`
+- Cells < 5 questions are too noisy to report per-bucket; categories < 30 are noisy at the difficulty level
 - Results are indicative, not definitive — expand to N=500 for ±4% CI
+
+#### Discriminative features (for A/B recipe comparison)
+
+The evaluator ships signal-extraction features tuned for A/B recipe comparison:
+
+- **Wilson 95% confidence intervals** per category-difficulty bucket — shows whether a 2% gap is meaningful or noise within ±6.8% (N=210).
+- **McNemar's paired test** on `--compare` runs — surfaces which side wins significantly (p < 0.05) and prints a per-question diff table.
+- **`--samples N`** for pass@k (e.g. `--samples 3`) — unbiased pass@1 vs pass@k per challenge; pass@3 typically jumps 5-15% on hard problems.
+- **Contamination check** at startup — SHA256 hash overlap between bench prompts and training corpus (>5% triggers a warning).
+- **Suspicious-memorization flag** — marks any response containing writeup markers ("Hack The Box", "writeup from", "walkthrough" etc.) so model outputs can be filtered pre-scoring.
+- **Length-bias probe** — compares mean response length of correct vs wrong answers to detect padding-based score inflation.
+- **Difficulty-balanced accuracy** — equal weight per category-difficulty bucket prevents easy-bucket domination.
 
 ### 5. Colab Integration (`finetune.sh`)
 
@@ -155,7 +176,7 @@ finetuning/
 │   ├── build_dataset.py     # Scrapes GitHub repos for writeups
 │   ├── download_datasets.py # Downloads HuggingFace datasets
 │   ├── process_data.py      # Converts data to chat format
-│   └── eval.py              # CTF model evaluator (200-question benchmark)
+│   └── eval.py              # CTF model evaluator (210-question benchmark)
 │
 ├── configs/                 # Model-specific configurations (3 total)
 │   ├── gemma4.yaml          # Gemma 4 E4B settings
@@ -168,7 +189,7 @@ finetuning/
 │
 ├── data/
 │   ├── eval/
-│   │   └── ctf_bench.jsonl  # 50 curated CTF challenges (evaluation)
+│   │   └── ctf_bench.jsonl  # 210 curated CTF challenges, stratified 50–57 per category
 │   ├── raw/                 # HuggingFace downloads (gitignored)
 │   ├── processed/           # Converted to chat format (gitignored)
 │   └── merged/              # Final merged training file (gitignored)
@@ -222,7 +243,9 @@ model:
 
 1. Create `configs/newmodel.yaml` with model settings
 2. Add the model to `config.yaml` under `models:`
-3. Run: `./finetune.sh newmodel --all`
+3. *(Required for the Colab notebook)* Add `(model, mode)` entries to the `MODEL_CONFIGS` dict in `notebooks/qwen4b_self_contained.ipynb`
+4. *(Required for `finetune.sh`)* Add `newmodel` to the model list and the config-upload line in `finetune.sh`
+5. Run: `./finetune.sh newmodel --all`
 
 ## Hardware Requirements
 

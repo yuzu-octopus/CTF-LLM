@@ -27,9 +27,9 @@ finetuning/
 │   ├── build_dataset.py     # GitHub scraping (writeups, docs)
 │   ├── download_datasets.py # HuggingFace datasets
 │   ├── process_data.py      # Alpaca → ChatML conversion
-│   └── eval.py              # CTF model evaluator (50-question benchmark)
+│   └── eval.py              # CTF model evaluator (210-question benchmark)
 ├── data/eval/
-│   └── ctf_bench.jsonl      # 50 curated CTF challenges (pwn/rev/crypto/web)
+│   └── ctf_bench.jsonl      # 210 curated CTF challenges (pwn/rev/crypto/web)
 ├── configs/
 │   ├── gemma4.yaml, gemma4-12b.yaml, qwen35.yaml, qwen35-4b.yaml
 ├── notebooks/
@@ -78,7 +78,7 @@ grep -c '"output": ""' data/merged/train.jsonl  # should be 0
 - **One notebook only** (`qwen4b_self_contained.ipynb`) — the training-only variant was deleted
 - **Notebook approach for training**, not `colab exec` — long-running training (model load + 3 epochs) hits Colab session timeout
 - **Distill-first policy** — check existing skills/commands before creating new ones
-- **`eval.py` limitations** — `grade_code` validates syntax + reference tokens (not functional correctness). `grade_mcq` matches `Answer: X` / `(X)` / fallback last letter; lowercases accepted. `grade_flag` uses regex `flag\{[^}]+\}`. Numbers < 5 per cell are noisy. N=200 gives ±7% CI (Wilson 95%).
+- **`eval.py` limitations** — `grade_code` validates syntax + reference tokens (or hidden test cases; not network-bound exploit exec). `grade_mcq` matches `Answer: X` / `(X)` / fallback last letter; lowercases accepted. `grade_flag` uses regex `flag\{[^}]+\}`. Cells < 5 questions are too noisy to report per-bucket; categories < 30 are noisy at the difficulty level. N=210 gives ±6.8% CI (Wilson 95%).
 
 ## Dataset: Fast vs Full Mode
 
@@ -135,6 +135,8 @@ TWO_STAGE=true ./finetune.sh qwen35 --all
 # or manually:
 uv run src/train.py --model qwen35 --data data/merged/train.jsonl --two-stage
 ```
+
+Both paths are wired: `src/train.py:344-345` accepts `--two-stage`; `finetune.sh:61` propagates `TWO_STAGE=true` as `--two-stage`.
 
 ### Build command (Full mode)
 

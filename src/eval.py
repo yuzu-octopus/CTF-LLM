@@ -203,6 +203,26 @@ def grade(challenge: dict, response: str) -> tuple[bool, str]:
     return False, f"Unknown task_type: {task_type}"
 
 
+def grade_with_subtasks(response: str, challenge: dict) -> tuple[float, str]:
+    """Grade a response with optional subtask partial credit. Returns (score, feedback)."""
+    subtasks = challenge.get("subtasks", [])
+    if not subtasks:
+        correct, fb = grade(challenge, response)
+        return float(correct), fb
+
+    total_weight = sum(s.get("weight", 1.0) for s in subtasks)
+    matched_weight = 0.0
+    details = []
+    for st in subtasks:
+        pat = st.get("criterion", "")
+        hit = bool(re.search(pat, response, re.I)) if pat else False
+        details.append({"name": st["name"], "hit": hit, "weight": st.get("weight", 1.0)})
+        if hit:
+            matched_weight += st.get("weight", 1.0)
+    score = matched_weight / total_weight if total_weight else 0
+    return score, json.dumps(details)
+
+
 SUSPICIOUS_MARKERS = [
     "writeup from", "write-up", "originally by", "Author: ",
     "HTB ", "Hack The Box", "from writeup", "picoCTF writeup",
@@ -256,13 +276,18 @@ def run_evaluation(model_key: str, adapter_path: str, bench_path: str = None,
         any_correct = False
         first_correct = False
         feedbacks = []
+        first_score = 0.0
+        any_score = 0.0
         for j, resp in enumerate(responses):
-            correct, fb = grade(ch, resp)
+            score, fb = grade_with_subtasks(resp, ch)
+            correct = score >= 1.0
             feedbacks.append(fb)
+            if j == 0:
+                first_score = score
+                first_correct = correct
             if correct:
                 any_correct = True
-                if j == 0:
-                    first_correct = True
+                any_score = max(any_score, score)
 
         cheated = any(m.lower() in responses[0].lower() for m in SUSPICIOUS_MARKERS)
 
@@ -272,7 +297,9 @@ def run_evaluation(model_key: str, adapter_path: str, bench_path: str = None,
             "difficulty": ch["difficulty"],
             "task_type": ch["task_type"],
             "correct": first_correct,
+            "score": first_score,
             "pass_at_k": any_correct,
+            "score_at_k": any_score,
             "feedback": feedbacks[0] if feedbacks else "",
             "response": responses[0],
             "all_responses": responses if n_samples > 1 else [],
@@ -298,16 +325,18 @@ def print_results(eval_result: dict):
     model_key = eval_result["model"]
 
     # Group by category-difficulty bucket
-    buckets = defaultdict(lambda: {"correct": 0, "total": 0, "times": []})
+    buckets = defaultdict(lambda: {"correct": 0, "total": 0, "times": [], "score_sum": 0.0})
     for r in results:
         key = f"{r['category']}-{r['difficulty']}"
         buckets[key]["total"] += 1
         if r["correct"]:
             buckets[key]["correct"] += 1
+        buckets[key]["score_sum"] += r.get("score", float(r["correct"]))
         buckets[key]["times"].append(r["time"])
 
     total_correct = sum(1 for r in results if r["correct"])
     total = len(results)
+    total_score = sum(r.get("score", float(r["correct"])) for r in results)
     mean_lat = sum(r["time"] for r in results) / total if total else 0
 
     # Pass@k stats
@@ -325,7 +354,7 @@ def print_results(eval_result: dict):
     print()
 
     # Bucket breakdown with Wilson CI
-    header = f"{'Bucket':<16} {'acc':>5} {'n':>4} {'CI95_lo':>7} {'CI95_hi':>7} {'mean_lat':>9}"
+    header = f"{'Bucket':<16} {'acc':>5} {'score':>6} {'n':>4} {'CI95_lo':>7} {'CI95_hi':>7} {'mean_lat':>9}"
     print(header)
     print("-" * len(header))
 
@@ -339,14 +368,16 @@ def print_results(eval_result: dict):
             if b["total"] == 0:
                 continue
             acc = b["correct"] / b["total"]
+            avg_score = b["score_sum"] / b["total"]
             lo, hi = wilson_ci(b["correct"], b["total"])
             avg_t = sum(b["times"]) / len(b["times"])
-            print(f"{key:<16} {acc:>4.0%} {b['total']:>4} {lo:>6.0%} {hi:>6.0%} {avg_t:>7.1f}s")
+            print(f"{key:<16} {acc:>4.0%} {avg_score:>5.2f} {b['total']:>4} {lo:>6.0%} {hi:>6.0%} {avg_t:>7.1f}s")
 
     # Overall
     lo, hi = wilson_ci(total_correct, total)
+    avg_score = total_score / total if total else 0
     print("-" * len(header))
-    print(f"{'overall':<16} {total_correct/total:>4.0%} {total:>4} {lo:>6.0%} {hi:>6.0%} {mean_lat:>7.1f}s")
+    print(f"{'overall':<16} {total_correct/total:>4.0%} {avg_score:>5.2f} {total:>4} {lo:>6.0%} {hi:>6.0%} {mean_lat:>7.1f}s")
 
     # Per-difficulty overall rows
     for d in difficulties:
@@ -354,16 +385,18 @@ def print_results(eval_result: dict):
         if not d_res:
             continue
         d_cor = sum(1 for r in d_res if r["correct"])
+        d_score = sum(r.get("score", float(r["correct"])) for r in d_res) / len(d_res)
         lo, hi = wilson_ci(d_cor, len(d_res))
         d_lat = sum(r["time"] for r in d_res) / len(d_res)
-        print(f"{'Overall ' + d:<16} {d_cor/len(d_res):>4.0%} {len(d_res):>4} {lo:>6.0%} {hi:>6.0%} {d_lat:>7.1f}s")
+        print(f"{'Overall ' + d:<16} {d_cor/len(d_res):>4.0%} {d_score:>5.2f} {len(d_res):>4} {lo:>6.0%} {hi:>6.0%} {d_lat:>7.1f}s")
     print()
 
     # Per-question breakdown
     print("Per-question breakdown:")
     for r in results:
         mark = "✓" if r["correct"] else "✗"
-        print(f"  {mark} {r['id']:<12} ({r['difficulty']:<6}) {r.get('feedback', '')[:50]}")
+        score = r.get("score", float(r["correct"]))
+        print(f"  {mark} {r['id']:<12} ({r['difficulty']:<6}) score={score:.2f} {r.get('feedback', '')[:50]}")
 
     # Length-bias probe
     correct_lens = [len(r["response"]) for r in results if r["correct"]]
@@ -385,11 +418,15 @@ def print_results(eval_result: dict):
     all_buckets = [(r["category"], r["difficulty"]) for r in results]
     unique_buckets = list(set(all_buckets))
     bucket_accs = {}
+    bucket_scores = {}
     for cat, diff in unique_buckets:
         bq = [r for r in results if r["category"] == cat and r["difficulty"] == diff]
         bucket_accs[(cat, diff)] = sum(1 for r in bq if r["correct"]) / len(bq)
+        bucket_scores[(cat, diff)] = sum(r.get("score", float(r["correct"])) for r in bq) / len(bq)
     balanced = sum(bucket_accs.values()) / len(bucket_accs) if bucket_accs else 0
-    print(f"  Balanced mean across {len(bucket_accs)} buckets: {balanced:.0%}")
+    balanced_score = sum(bucket_scores.values()) / len(bucket_scores) if bucket_scores else 0
+    print(f"  Balanced mean acc across {len(bucket_accs)} buckets: {balanced:.0%}")
+    print(f"  Balanced mean score across {len(bucket_scores)} buckets: {balanced_score:.2f}")
 
 
 def print_comparison(eval_results: list[dict]):
@@ -405,7 +442,7 @@ def print_comparison(eval_results: list[dict]):
     header = f"{'Category':<10}"
     for er in eval_results:
         name = er["model"]
-        header += f" {name:<15}"
+        header += f" {name:<25}"
     print(header)
     print("-" * len(header))
 
@@ -416,8 +453,10 @@ def print_comparison(eval_results: list[dict]):
             cat_results = [r for r in er["results"] if r["category"] == cat]
             correct = sum(1 for r in cat_results if r["correct"])
             total = len(cat_results)
+            total_score = sum(r.get("score", float(r["correct"])) for r in cat_results)
+            avg_score = total_score / total if total else 0
             lo, hi = wilson_ci(correct, total)
-            row += f" {correct}/{total} ({lo:.0%}-{hi:.0%}){'':<2}"
+            row += f" {correct}/{total} (s={avg_score:.2f}, {lo:.0%}-{hi:.0%}){'':<2}"
         print(row)
 
     # Overall
@@ -426,8 +465,10 @@ def print_comparison(eval_results: list[dict]):
     for er in eval_results:
         correct = sum(1 for r in er["results"] if r["correct"])
         total = len(er["results"])
+        total_score = sum(r.get("score", float(r["correct"])) for r in er["results"])
+        avg_score = total_score / total if total else 0
         lo, hi = wilson_ci(correct, total)
-        row += f" {correct}/{total} ({lo:.0%}-{hi:.0%}){'':<2}"
+        row += f" {correct}/{total} (s={avg_score:.2f}, {lo:.0%}-{hi:.0%}){'':<2}"
     print(row)
     print()
 
@@ -499,12 +540,15 @@ def save_results(eval_results: list[dict], output_dir: str):
     for er in eval_results:
         correct = sum(1 for r in er["results"] if r["correct"])
         total = len(er["results"])
+        total_score = sum(r.get("score", float(r["correct"])) for r in er["results"])
+        avg_score = total_score / total if total else 0
         lo, hi = wilson_ci(correct, total)
         cheated = sum(1 for r in er["results"] if r.get("suspicious_memorization"))
         data["results"].append({
             "model": er["model"],
             "adapter": er["adapter"],
             "accuracy": correct / total if total else 0,
+            "mean_score": avg_score,
             "wilson_ci95": [lo, hi],
             "correct": correct,
             "total": total,
