@@ -953,11 +953,13 @@ html {
 
 | Session | Items | Effort | Outcome |
 |---------|-------|--------|---------|
-| **1 — TODAY** | T1.1, T1.3, T1.4, T1.5 | ~35 LoC, ~25 min | Feedback + per-difficulty CI + length-bias probe + cheating flag live. Debugability doubled. |
-| **2 — TODAY (separate commit)** | D1, D2, D3, D4, D5, D6, D7, D8, D9, D10, D11 | ~104 LoC, ~45 min | Doc-truth alignment across website, README, AGENTS. Site accurate, accessible, shareable. |
-| **3 — This week** | T1.2 (`--samples`) | ~30 LoC, ~20 min | pass@3 hard-task discrimination. A/B recipe comparison meaningful. |
-| **4 — Next week** | T2.1, T2.3 | ~60 LoC, 1 h curation | Functional correctness on code tasks; contamination check at startup. |
-| **5 — Later** | T2.2, T2.4, T3.1, T3.2, T3.3 | ~150 LoC + 4 h curation | Partial credit + 6 discriminative task types. Publication-grade. |
+| **1** | T1.1, T1.3, T1.4, T1.5 | ~35 LoC, ~25 min | ✅ Feedback + per-difficulty CI + length-bias probe + cheating flag live. Debugability doubled. |
+| **2** | D1, D2, D3, D4, D5, D6, D7, D8, D9, D10, D11 | ~104 LoC, ~45 min | ✅ Doc-truth alignment across website, README, AGENTS. Site accurate, accessible, shareable. |
+| **3** | T1.2 (`--samples`) | ~30 LoC, ~20 min | ✅ pass@3 hard-task discrimination. A/B recipe comparison meaningful. |
+| **4** | T2.1, T2.3 | ~60 LoC, 1 h curation | ✅ Functional correctness on code tasks; contamination check at startup. |
+| **5** | T2.2, T2.4, T3.1, T3.2, T3.3, D1-D11, 009-015 | ~150 LoC + 4 h curation | ✅ Partial credit + 6 discriminative task types. CI pipeline. Publication-grade evaluator. |
+
+All items in this plan are resolved. See `plans/` for the /improve audit history.
 
 Doc-side (D-block) is fully orthogonal to T-block. Ship in parallel commits. T-block requires pytest validation; D-block requires only manual review of the rendered HTML.
 

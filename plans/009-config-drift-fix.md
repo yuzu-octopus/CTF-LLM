@@ -1,7 +1,7 @@
 # Plan 009: Config Drift Fix (F3)
 
 **Commit**: `6d7af02`  
-**Status**: TODO  
+**Status**: ✅ DONE (44d12cb)  
 **Effort**: S (~30 min)  
 **Risk**: LOW (config values only, no code changes)
 

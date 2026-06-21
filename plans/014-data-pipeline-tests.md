@@ -1,7 +1,7 @@
 # Plan 014: Data Pipeline Test Expansion (F4)
 
 **Commit**: `6d7af02`  
-**Status**: TODO  
+**Status**: ✅ DONE (44d12cb)  
 **Effort**: M (~3 h)  
 **Risk**: MED (tests may need fixtures or mock data)
 

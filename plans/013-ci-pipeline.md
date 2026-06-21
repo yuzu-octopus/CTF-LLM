@@ -1,7 +1,7 @@
 # Plan 013: CI Pipeline Setup (F2)
 
 **Commit**: `6d7af02`  
-**Status**: TODO  
+**Status**: ✅ DONE (44d12cb)  
 **Effort**: M (~2 h)  
 **Risk**: LOW (new CI config, no code changes)
 

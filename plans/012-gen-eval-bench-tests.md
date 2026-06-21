@@ -1,7 +1,7 @@
 # Plan 012: gen_eval_bench.py — Tests + Doc References (F1)
 
 **Commit**: `6d7af02`  
-**Status**: TODO  
+**Status**: ✅ DONE (44d12cb)  
 **Effort**: M (~2 h)  
 **Risk**: MED (regenerating ctf_bench.jsonl overwrites hand-curated subtask fields)
 

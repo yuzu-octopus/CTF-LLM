@@ -27,7 +27,13 @@ finetuning/
 │   ├── build_dataset.py     # GitHub scraping (writeups, docs)
 │   ├── download_datasets.py # HuggingFace datasets
 │   ├── process_data.py      # Alpaca → ChatML conversion
+│   ├── gen_eval_bench.py    # Generates 210-ctf benchmark (datagen, --output flag, no GPU)
 │   └── eval.py              # CTF model evaluator (210-question benchmark)
+├── tests/                   # 68 tests across 8 files
+│   ├── test_eval.py, test_eval_orchestration.py
+│   ├── test_gen_eval_bench.py
+│   ├── test_build_dataset.py, test_build_dataset_expanded.py
+│   └── test_download_datasets.py, test_loss_masking.py, test_process_data.py
 ├── data/eval/
 │   └── ctf_bench.jsonl      # 210 curated CTF challenges (pwn/rev/crypto/web)
 ├── configs/
@@ -66,6 +72,9 @@ uv run src/gen_eval_bench.py  # outputs to data/eval/ctf_bench.jsonl
 # Via finetune.sh
 ./finetune.sh gemma4 --eval
 
+# Run the test suite
+uv run pytest tests/ -v  # 68 tests
+
 # Verify output
 head -1 data/merged/train.jsonl | python -m json.tool
 grep -c '"output": ""' data/merged/train.jsonl  # should be 0
@@ -81,7 +90,7 @@ grep -c '"output": ""' data/merged/train.jsonl  # should be 0
 - **One notebook only** (`qwen4b_self_contained.ipynb`) — the training-only variant was deleted
 - **Notebook approach for training**, not `colab exec` — long-running training (model load + 3 epochs) hits Colab session timeout
 - **Distill-first policy** — check existing skills/commands before creating new ones
-- **`eval.py` limitations** — `grade_code` validates syntax + reference tokens (or hidden test cases; not network-bound exploit exec). `grade_mcq` matches `Answer: X` / `(X)` / fallback last letter; lowercases accepted. `grade_flag` uses regex `flag\{[^}]+\}`. Cells < 5 questions are too noisy to report per-bucket; categories < 30 are noisy at the difficulty level. N=210 gives ±6.8% CI (Wilson 95%).
+- **`eval.py` limitations** — `grade_code` validates syntax + reference tokens (or hidden test cases; not network-bound exploit exec). `grade_mcq` matches `Answer: X` / `(X)` / fallback last letter; lowercases accepted. `grade_flag` uses regex `flag\{[^}]+\}`. Cells < 5 questions are too noisy to report per-bucket; categories < 30 are noisy at the difficulty level. N=210 gives ±6.8% CI (Wilson 95%). `torch` import is guarded with try/except so pure functions import without GPU.
 
 ## Dataset: Fast vs Full Mode
 

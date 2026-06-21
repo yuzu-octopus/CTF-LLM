@@ -1,5 +1,7 @@
 # CTF-LLM
 
+[![CI](https://github.com/yuzu-octopus/CTF-LLM/actions/workflows/ci.yml/badge.svg)](https://github.com/yuzu-octopus/CTF-LLM/actions/workflows/ci.yml)
+
 Fine-tune open-source LLMs (Gemma 4 E4B, Qwen 3.5 9B/4B) to excel at cybersecurity CTF challenges and competitive programming using [Unsloth](https://unsloth.ai) with QLoRA on Google Colab's free tier.
 
 ## What This Does
@@ -100,7 +102,7 @@ Training outputs three model versions:
 
 ### 4. Model Evaluation (`src/eval.py`)
 
-Runs trained models against a 210-question CTF benchmark (stratified pwn/rev/crypto/web × easy/medium/hard) and reports per-bucket accuracy with Wilson 95% confidence intervals:
+Runs trained models against a 210-question CTF benchmark (stratified pwn/rev/crypto/web × easy/medium/hard) and reports per-bucket accuracy with Wilson 95% confidence intervals, McNemar's paired test, and pass@k:
 
 ```bash
 # Single model
@@ -176,11 +178,21 @@ finetuning/
 │   ├── build_dataset.py     # Scrapes GitHub repos for writeups
 │   ├── download_datasets.py # Downloads HuggingFace datasets
 │   ├── process_data.py      # Converts data to chat format
-│   ├── gen_eval_bench.py    # Generates the 210-question CTF benchmark (datagen, no GPU)
+│   ├── gen_eval_bench.py    # Generates 210-question CTF benchmark (datagen, no GPU)
 │   └── eval.py              # CTF model evaluator (210-question benchmark)
 │
-├── configs/                 # Model-specific configurations (3 total)
-│   ├── gemma4.yaml          # Gemma 4 E4B settings
+├── tests/                   # Python test suite (68 tests, CI via GitHub Actions)
+│   ├── test_eval.py         # 24 tests: grading functions + Wilson CI
+│   ├── test_eval_orchestration.py  # 8 tests: result aggregation, subtask grading, save
+│   ├── test_gen_eval_bench.py      # 12 tests: benchmark structure, task types, IDs
+│   ├── test_build_dataset.py       # 6 tests: extraction functions
+│   ├── test_build_dataset_expanded.py  # 6 tests: CTF content, solution text, repos
+│   ├── test_download_datasets.py  # 4 tests: QA extraction, HF fallback
+│   ├── test_loss_masking.py       # 3 tests: loss masking logic
+│   └── test_process_data.py      # 5 tests: content detection
+│
+├── configs/                 # Model-specific configurations (4 total)
+│   ├── gemma4.yaml          # Gemma 4 E4B settings (quality-mode default)
 │   ├── gemma4-12b.yaml      # Gemma 4 12B settings
 │   ├── qwen35.yaml          # Qwen 3.5 9B settings
 │   └── qwen35-4b.yaml       # Qwen 3.5 4B settings
@@ -194,6 +206,11 @@ finetuning/
 │   ├── raw/                 # HuggingFace downloads (gitignored)
 │   ├── processed/           # Converted to chat format (gitignored)
 │   └── merged/              # Final merged training file (gitignored)
+│
+├── .github/workflows/       # CI pipeline (pytest + ruff on push/PR)
+│   └── ci.yml
+│
+└── plans/                   # Improvement plans (/improve artifacts)
 ```
 
 ## Configuration
