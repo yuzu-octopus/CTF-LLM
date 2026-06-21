@@ -1,3 +1,5 @@
+# Default: quality mode (r=32, alpha=64). Fast mode (r=8, alpha=16) is
+# controlled by the notebook MODEL_CONFIGS dict; override via --mode fast.
 # Qwen 3.5 9B Configuration
 # QLoRA with load_in_4bit=True works on T4 (~6GB weights)
 model:

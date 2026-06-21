@@ -1,3 +1,5 @@
+# Default: quality mode (r=32, alpha=64). Fast mode (r=8, alpha=16) is
+# controlled by the notebook MODEL_CONFIGS dict; override via --mode fast.
 # Gemma 4 12B Unified Configuration
 # Encoder-free multimodal (text + image + audio), 256K context
 # 4-bit QLoRA on T4 16GB (tight: ~10-12GB with LoRA + optimizer)

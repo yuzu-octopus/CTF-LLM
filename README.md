@@ -176,6 +176,7 @@ finetuning/
 │   ├── build_dataset.py     # Scrapes GitHub repos for writeups
 │   ├── download_datasets.py # Downloads HuggingFace datasets
 │   ├── process_data.py      # Converts data to chat format
+│   ├── gen_eval_bench.py    # Generates the 210-question CTF benchmark (datagen, no GPU)
 │   └── eval.py              # CTF model evaluator (210-question benchmark)
 │
 ├── configs/                 # Model-specific configurations (3 total)

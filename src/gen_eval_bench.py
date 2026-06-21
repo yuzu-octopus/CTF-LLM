@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
 """Generate CTF evaluation benchmark dataset — N=200 (50 per category)."""
+# WARNING: Regenerating this file overwrites data/eval/ctf_bench.jsonl.
+# Hand-curated fields (subtasks, test_cases, etc.) in the JSONL will be lost.
+# To preserve them, regenerate into a temp file and manually merge:
+#   uv run src/gen_eval_bench.py --output /tmp/new_bench.jsonl
+#   python3 -c "..."  # merge subtasks from current bench into new
+import argparse
 import hashlib
 import json
 import os
@@ -718,7 +724,15 @@ def build_benchmark():
 
 
 def main():
-    output_path = Path(__file__).parent.parent / "data" / "eval" / "ctf_bench.jsonl"
+    parser = argparse.ArgumentParser(description="Generate CTF evaluation benchmark")
+    parser.add_argument("--output", default=None,
+                        help="Output path (default: data/eval/ctf_bench.jsonl)")
+    args = parser.parse_args()
+
+    if args.output:
+        output_path = Path(args.output)
+    else:
+        output_path = Path(__file__).parent.parent / "data" / "eval" / "ctf_bench.jsonl"
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     challenges = build_benchmark()

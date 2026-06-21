@@ -18,7 +18,10 @@ from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 
-import torch
+try:
+    import torch
+except ImportError:
+    torch = None
 
 
 def load_benchmarks(bench_path: str = None) -> list[dict]:

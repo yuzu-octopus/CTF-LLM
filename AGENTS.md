@@ -60,6 +60,9 @@ uv run src/eval.py --model gemma4 --adapter outputs/gemma4-ctf/lora
 uv run src/eval.py --compare gemma4:outputs/gemma4-ctf/lora qwen35:outputs/qwen35-ctf/lora
 uv run src/eval.py --model gemma4 --adapter outputs/gemma4-ctf/lora --category pwn --difficulty easy
 
+# Regenerate the eval benchmark (preserves warning: run with --output first)
+uv run src/gen_eval_bench.py  # outputs to data/eval/ctf_bench.jsonl
+
 # Via finetune.sh
 ./finetune.sh gemma4 --eval
 

@@ -280,57 +280,6 @@ def extract_writeups_from_repo(repo_path: str, category: str, repo_name: str) ->
     return examples
 
 
-def extract_from_huggingface(dataset_name: str, max_samples: int = 5000) -> list:
-    """Extract and convert a HuggingFace dataset to Alpaca format"""
-    examples = []
-    
-    if not HAS_DATASETS:
-        print(f"  Skipping {dataset_name} (datasets library not installed)")
-        return examples
-    
-    start_time = time.time()
-    try:
-        try:
-            ds = load_dataset(dataset_name, split="train")
-        except Exception:
-            try:
-                ds = load_dataset(dataset_name, split="test")
-            except Exception:
-                ds = load_dataset(dataset_name)
-        
-        ds_len = min(len(ds), max_samples)
-        data_iter = ds
-        if HAS_TQDM:
-            data_iter = tqdm(ds, total=ds_len, desc=f"    {dataset_name}", unit="row")
-        
-        for i, item in enumerate(data_iter):
-            if i >= max_samples:
-                break
-            
-            question = item.get("question", item.get("problem", item.get("description", "")))
-            answer = item.get("answer", item.get("solution", item.get("flag", "")))
-            category = item.get("category", item.get("type", ""))
-            
-            text_chunk = item.get("text_chunk", "")
-            if text_chunk and not question:
-                question = "Explain this CTF writeup and provide the solution"
-                answer = text_chunk
-            
-            if question and answer:
-                examples.append({
-                    "instruction": question,
-                    "input": "",
-                    "output": f"Category: {category}\n\n{answer}" if category else answer
-                })
-        
-        elapsed = time.time() - start_time
-        print(f"    ✓ {dataset_name}: {len(examples)} examples ({elapsed:.1f}s)")
-    except Exception as e:
-        print(f"  Failed to load {dataset_name}: {e}")
-    
-    return examples
-
-
 def scrape_documentation(url: str, name: str) -> list:
     """Scrape a single documentation file using requests"""
     examples = []

@@ -4,6 +4,9 @@
 # Default model
 default_model: gemma4
 
+# WARNING: config.yaml values are quality-mode defaults. The notebook
+# MODEL_CONFIGS dict provides per-mode overrides (fast/quality).
+# Keep both in sync when adding a new model.
 # Model configurations (mirror configs/*.yaml structure so fallback works)
 models:
   gemma4:
