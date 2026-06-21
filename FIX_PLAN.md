@@ -1,8 +1,8 @@
 # FIX_PLAN — CTF Evaluator: Discriminative-Power Upgrades
 
-> **Scope:** `src/eval.py` (405 LoC) + `data/eval/ctf_bench.jsonl` (200 Qs) + `tests/test_eval.py` (currently 0 LoC)
-> **Source:** Deep-research synthesis (HumanEval/MBPP/EvalPlus/LiveCodeBench/SWE-bench, LiveCTF/Cybench/InterCode-CTF/CTFusion, OpenAI Evals/Inspect-AI) followed by detailed thinking about applicability to offline local Colab T4 setup.
-> **Origin:** Prior E1–E9 items in this plan are all shipped. This is the **next round** — items that the prior round didn't cover because the research wasn't done yet.
+> **Scope:** `src/eval.py` (405 LoC) + `data/eval/ctf_bench.jsonl` (210 Qs) + `tests/test_eval.py` (currently 0 LoC) + `docs/index.html` + `README.md` + `AGENTS.md`
+> **Source:** Deep-research synthesis (HumanEval/MBPP/EvalPlus/LiveCodeBench/SWE-bench, LiveCTF/Cybench/InterCode-CTF/CTFusion, OpenAI Evals/Inspect-AI) followed by detailed thinking about applicability to offline local Colab T4 setup, followed by an end-to-end audit of the website (`docs/index.html` 556 LoC) and cross-doc drift against `README.md`, `AGENTS.md`, and `src/eval.py`.
+> **Origin:** Prior E1–E9 items in this plan are all shipped. T1–T3 (this file's Sections B, C, E) were the **next-round** roadmap identified by research. Section F (D1–D11) is the **doc-just-fix-it** roadmap identified by audit.
 
 ---
 
@@ -22,8 +22,10 @@
 | T3.1 | MED  | Add `vulnerability_identification` task type | ~30 + 20 entries | 1.5 h | grader + bench |
 | T3.2 | MED  | Add `patch_generation` task type | ~30 + 10 entries | 1 h | grader + bench |
 | T3.3 | LOW  | Add `exploit_trace` task type | ~25 + 10 entries | 1 h | grader + bench |
+| **D1–D11** | **CRIT → LOW** | **Doc-truth alignment: 11 cross-doc / website fixes** | **~104** | **~45 min** | **docs/index.html, README.md, AGENTS.md, src/train.py** |
 
-**Total: ~265 LoC + ~40 bench entries** — ship in 3 sessions.
+**Code-side total (T1-T3): ~265 LoC + ~40 bench entries — ship in 3 sessions.**
+**Doc-side total (D1-D11): ~104 LoC across 4 files — ship in 1 session.**
 
 ---
 
@@ -511,6 +513,476 @@ Tests reasoning quality before solution: model lists the steps it would take.
 
 ---
 
+## Section F — Cross-doc + Website Hardening (audit block, doc-only)
+
+> **Source:** End-to-end audit of `docs/index.html` (556 LoC), `README.md`, `AGENTS.md`, `config.yaml`, `src/eval.py`, and actual `data/eval/ctf_bench.jsonl`. Compared website claims to reality; checked cross-doc consistency; validated HTML structure; identified accessibility, SEO, and cross-browser gaps.
+>
+> **All D1–D11 below are doc-only fixes.** No code changes. Ship as **one commit** in ~45 min. Do **not** bundle with T1–T3 (different rollout: doc fixes don't need pytest, code fixes do).
+
+### F-TL;DR — 11 audit items
+
+| ID    | Sev  | File(s) | Headline | LoC  | Time |
+|-------|------|---------|----------|------|------|
+| D1    | CRIT | README.md, AGENTS.md | Benchmark N 4-way drift: `200`/`50` → `210` everywhere; ±7% → ±6.8% CI | ~30 | 5 min |
+| D2    | CRIT | docs/index.html | Models table hardcodes LoRA Rank 32 — split into Fast (r=8) + Quality (r=16/32) | ~15 | 10 min |
+| D3    | CRIT | docs/index.html | Gemma 4 12B VRAM overstates by 3 GB: `~14GB` → `~11GB` | 1 | 30 s |
+| D4    | HIGH | docs/index.html, README.md | Task-type list drift: website=5, README=3, dispatch=6 → align to 6 | ~6 | 5 min |
+| D5    | HIGH | README.md | "Adding a New Model" section missing notebook-MODEL_CONFIGS step | ~5 | 5 min |
+| D6    | HIGH | README.md | § 4 "Model Evaluation" undersells: add Wilson/McNemar/`--samples`/contamination/cheating | ~12 | 5 min |
+| D7    | MED  | README.md | Mention `--no-system-prompt` 6.2M-char savings in § 2 | ~8 | 3 min |
+| D8    | MED  | AGENTS.md / src/train.py | Reconcile `--two-stage` documentation with implementation | ~5 | 5 min |
+| D9    | MED  | docs/index.html | ARIA: mobile toggle `aria-label` + 7 sidebar SVGs `aria-hidden` | ~8 | 5 min |
+| D10   | MED  | docs/index.html | Add Open Graph + Twitter Card meta tags in `<head>` | ~12 | 5 min |
+| D11   | LOW  | docs/index.html | Firefox scrollbar CSS (`scrollbar-width: thin; scrollbar-color`) | 2 | 1 min |
+
+**Doc-side total: ~104 LoC across 4 files, ~45 min.** Ship in 1 commit.
+
+---
+
+### D1 (CRIT) — Benchmark size 4-way drift → 210, ±6.8%
+
+**Why.** Four sources disagree on the benchmark size. Mathematics: Wilson 95% CI = 1.96 × √(p(1-p)/n); for p=0.5, N=200 → CI half-width = 6.9% (rounds to "±7%"). For N=210 → 6.77% (rounds to "±6.8%"). New exact value is **±6.8%**, **not** ±7%.
+
+| Source | Currently says | Reality |
+|---|---|---|
+| `data/eval/ctf_bench.jsonl` | 210 lines | ground truth ✓ |
+| `docs/index.html` line ~270 | "210 questions" | ✓ correct |
+| `docs/index.html` line ~290 | "210 questions" | ✓ correct |
+| `README.md` § 4 "Model Evaluation" (≈line 61) | "200-question CTF benchmark (50 per category)" | **wrong** |
+| `README.md` Project Structure tree (≈line 110) | "# 50 curated CTF challenges (evaluation)" | **wrong** |
+| `README.md` § 4 "Evaluator limitations" (≈line 80) | "N=200 gives ±7% margin of error" | **wrong** |
+| `AGENTS.md` Project Structure tree (≈line 21) | `eval.py — CTF model evaluator (50-question benchmark)` | **wrong** |
+| `AGENTS.md` Critical Rules bullet (≈line 35) | "N=200 gives ±7% CI (Wilson 95%)" | **wrong** |
+
+**Five concrete edits:**
+
+1. `README.md` ≈line 61 — replace:
+   ```
+   Runs trained models against a 200-question CTF benchmark (50 per category) and reports
+   accuracy with Wilson 95% confidence intervals:
+   ```
+   with:
+   ```
+   Runs trained models against a 210-question CTF benchmark (stratified pwn/rev/crypto/web ×
+   easy/medium/hard) and reports per-bucket accuracy with Wilson 95% confidence intervals:
+   ```
+
+2. `README.md` ≈line 80 — replace:
+   ```
+   **Evaluator limitations** (N=200 gives ±7% margin of error):
+   ```
+   with:
+   ```
+   **Evaluator limitations** (N=210 gives ±6.8% margin of error per Wilson 95% CI):
+   ```
+
+3. `README.md` ≈line 110 (Project Structure tree) — replace:
+   ```
+   │   └── ctf_bench.jsonl  # 50 curated CTF challenges (evaluation)
+   ```
+   with:
+   ```
+   │   └── ctf_bench.jsonl  # 210 curated CTF challenges, stratified 50–57 per category
+   ```
+
+4. `AGENTS.md` ≈line 21 (Project Structure tree) — replace:
+   ```
+   │   └── eval.py              # CTF model evaluator (50-question benchmark)
+   ```
+   with:
+   ```
+   │   └── eval.py              # CTF model evaluator (210-question benchmark)
+   ```
+
+5. `AGENTS.md` ≈line 35 (Critical Rules: `eval.py` bullet) — replace:
+   ```
+   - **`eval.py` limitations** — `grade_code` validates syntax + reference tokens (not functional correctness). `grade_mcq` matches `Answer: X` / `(X)` / fallback last letter; lowercases accepted. `grade_flag` uses regex `flag\{[^}]+\}`. Numbers < 5 per cell are noisy. N=200 gives ±7% CI (Wilson 95%).
+   ```
+   with:
+   ```
+   - **`eval.py` limitations** — `grade_code` validates syntax + reference tokens (or hidden test cases; not network-bound exploit exec). `grade_mcq` matches `Answer: X` / `(X)` / fallback last letter; lowercases accepted. `grade_flag` uses regex `flag\{[^}]+\}`. Cells < 5 questions are too noisy to report per-bucket; categories < 30 are noisy at the difficulty level. N=210 gives ±6.8% CI (Wilson 95%).
+   ```
+
+**Verify.**
+```bash
+grep -nE '200.question|N=200|50.question|50 curated|±7%' README.md AGENTS.md
+# expected: zero matches outside this plan file
+
+grep -c '210' README.md AGENTS.md docs/index.html
+# expected: ≥ 4 hits across the three docs
+
+wc -l data/eval/ctf_bench.jsonl
+# expected: 210
+```
+
+**Effort:** ~30 LoC across 5 inserts/edits, 5 min.
+
+---
+
+### D2 (CRIT) — Models table: split hardcoded "LoRA Rank 32" into Fast + Quality
+
+**Why.** The website's Models table (≈line 248–267) hardcodes:
+
+| Model | LoRA Rank |
+|---|---|
+| Gemma 4 E4B | 32 |
+| Gemma 4 12B | 32 |
+| Qwen 3.5 9B | 32 |
+| Qwen 3.5 4B | 8 |
+
+Reality from `AGENTS.md` MODEL_CONFIGS table:
+- gemma4: fast=**8**, quality=**32**
+- gemma4-12b: fast=**8**, quality=**32**
+- qwen35-4b: fast=**8**, quality=**16** ← mixed ranks per mode!
+- qwen35: fast=**8**, quality=**32**
+
+So Qwen 3.5 4B at r=8 is correct *only for fast mode*; quality uses r=16. The single-Rank column is so wrong it's actively misleading. A user picking fast mode with qwen35-4b assumes rank 8 — fine; but a user picking fast mode with the other three assumes *rank 32* — wrong by 4×.
+
+**Fix (`docs/index.html` ≈line 248–267):** split the "LoRA Rank" column into two:
+
+```html
+<table>
+  <thead>
+    <tr>
+      <th>Model</th>
+      <th>Parameters</th>
+      <th>Fast Mode (LoRA r)</th>
+      <th>Quality Mode (LoRA r)</th>
+      <th>VRAM (T4)</th>
+      <th>Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>Gemma 4 E4B</td><td>~4.5B</td><td>8</td><td>32</td><td>~10GB</td><td class="status-comfortable">Comfortable</td></tr>
+    <tr><td>Gemma 4 12B</td><td>~12B</td><td>8</td><td>32</td><td>~11GB</td><td class="status-tight">Tight</td></tr>
+    <tr><td>Qwen 3.5 9B</td><td>~9B</td><td>8</td><td>32</td><td>~12GB</td><td class="status-comfortable">Comfortable</td></tr>
+    <tr><td>Qwen 3.5 4B</td><td>~4B</td><td>8</td><td>16</td><td>~8GB</td><td class="status-comfortable">Comfortable</td></tr>
+  </tbody>
+</table>
+```
+
+Also tweak the "Training Modes" section text immediately above the models table to clarify: *"LoRA rank is mode-dependent, not intrinsic to the model. Fast uses r=8 across all 4 models; Quality uses r=32 for the 9B/12B models and r=16 for the 4B model."*
+
+**Verify.**
+```bash
+grep -nE 'Fast Mode|Quality Mode' docs/index.html
+# expected: ≥ 2 hits in <thead>
+
+grep -c '>32<' docs/index.html
+# expected: ≥ 3 (matches the Quality-mode r=32 cells)
+```
+
+**Effort:** ~15 LoC, 10 min.
+
+---
+
+### D3 (CRIT) — Gemma 4 12B VRAM: `~14GB` → `~11GB`
+
+**Why.** The website claim `~14GB` for Gemma 4 12B and status "Tight" is 3 GB too pessimistic. Reality from `configs/gemma4-12b.yaml` header (`# tight: ~10-11GB on free T4 16GB`) and `AGENTS.md` Known Gotchas ("~10-11GB") shows it fits on a stock T4. A user with 16 GB T4 reading "~14GB" would unnecessarily reject this model.
+
+**Fix (`docs/index.html` ≈line 261):**
+```diff
+- <tr><td>Gemma 4 12B</td><td>~12B</td><td>32</td><td>~14GB</td><td class="status-tight">Tight</td></tr>
++ <tr><td>Gemma 4 12B</td><td>~12B</td><td>8 / 32</td><td>~11GB</td><td class="status-tight">Tight</td></tr>
+```
+
+Also fine-tune the "Tight" status copy: change "Tight" tooltip-equivalent legend (if any) to clarify "Tight = fits on T4 with limited headroom; do not run `--samples > 3` on hard problems".
+
+**Verify.**
+```bash
+grep -nE '~14GB|Gemma 4 12B' docs/index.html src/*.py configs/*.yaml README.md AGENTS.md
+# expected: no ~14GB mention anywhere except this plan file
+```
+
+**Effort:** 1 char + 1 cell, 30 s.
+
+---
+
+### D4 (HIGH) — Task-type list: align all 3 docs to actual 6 types
+
+**Why.** `src/eval.py` `grade()` dispatcher (≈line 213–227) supports **6** task_types: `flag_extraction, multiple_choice, code_generation, vulnerability_identification, patch_generation, exploit_trace`. Docs disagree:
+
+- `docs/index.html` ≈line 293 lists **5** (missing `multiple_choice`)
+- `README.md` ≈line 77 lists **3** (only flag / mcq / code)
+
+The website omits a real grader type; README is wildly stale. Users writing MCQ-style CTF challenges won't be able to grade them since the grader is set up but the docs don't tell them the option exists.
+
+**Fix (`docs/index.html` ≈line 293):**
+```diff
+- <li><strong>Task types</strong> &mdash; flag_extraction, code_generation, vulnerability_identification, patch_generation, exploit_trace</li>
++ <li><strong>Task types</strong> &mdash; flag_extraction, multiple_choice, code_generation, vulnerability_identification, patch_generation, exploit_trace</li>
+```
+
+**Fix (`README.md` ≈line 77):**
+```diff
+- The benchmark covers 4 categories (pwn, rev, crypto, web) across 3 difficulty levels, with automatic grading for flag extraction, multiple choice, and code generation tasks.
++ The benchmark covers 4 categories (pwn, rev, crypto, web) across 3 difficulty levels. Six task types are auto-graded:
++ - **flag_extraction** — regex match `flag\{[^}]+\}` against expected
++ - **multiple_choice** — match `Answer: X` / `(X)` / fallback last letter (case-insensitive)
++ - **code_generation** — extract fenced block, syntax-check, optional hidden test-case eval
++ - **vulnerability_identification** — same as multiple_choice (MCQ-style A/B/C/D)
++ - **patch_generation** — banned-token + required-token set checks
++ - **exploit_trace** — required-step regex hits across response text
+```
+
+**Verify.**
+```bash
+for t in flag_extraction multiple_choice code_generation vulnerability_identification patch_generation exploit_trace; do
+    c=$(grep -c "$t" docs/index.html README.md)
+    echo "$t: $c mentions across the 2 docs"
+    [ "$c" -ge 2 ] || echo "  ⚠  $t appears in fewer than 2 docs"
+done
+# expected: every type ≥ 2 mentions
+```
+
+**Effort:** ~6 LoC, 5 min.
+
+---
+
+### D5 (HIGH) — README § "Adding a New Model" — insert notebook + finetune.sh steps
+
+**Why.** `README.md` § "Adding a New Model" (≈line 211) lists 3 steps:
+1. Create `configs/newmodel.yaml`
+2. Add to `config.yaml` under `models:`
+3. Run `./finetune.sh newmodel --all`
+
+But `AGENTS.md` says you also need to:
+- Add `(model, mode)` entries to notebook `MODEL_CONFIGS` dict
+- Update `finetune.sh` model list and config upload line
+
+A user following README alone will hit `KeyError: 'newmodel'` in the notebook at training time.
+
+**Fix (`README.md` § "Adding a New Model"):**
+```diff
+ ## Adding a New Model
+
+ 1. Create `configs/newmodel.yaml` with model settings
+ 2. Add the model to `config.yaml` under `models:`
+-3. Run: `./finetune.sh newmodel --all`
++3. *(Required for the Colab notebook)* Add `(model, mode)` entries to the `MODEL_CONFIGS` dict in `notebooks/qwen4b_self_contained.ipynb`
++4. *(Required for `finetune.sh`)* Add `newmodel` to the model list and the config-upload line in `finetune.sh`
++5. Run: `./finetune.sh newmodel --all`
+```
+
+**Verify.** Manual grep:
+```bash
+grep -nE 'MODEL_CONFIGS|finetune.sh' README.md
+# expected: mentioned in both § Project Structure (file path is fine) AND § Adding a New Model (the step itself)
+```
+
+**Effort:** ~5 LoC, 5 min.
+
+---
+
+### D6 (HIGH) — README § 4 "Model Evaluation" — promote discriminative features
+
+**Why.** `README.md` § 4 (≈line 70–79) only mentions flag/mcq/code grading and `--output`. The evaluator (`src/eval.py`) ships far more — Wilson 95% CI per bucket, McNemar's paired test, `--samples N` for pass@k, contamination SHA256 check, suspicious-memorization flag. None are advertised in README. Users reading only README will under-utilize the evaluator and miss out on `#1` accuracy claim capability.
+
+**Fix (`README.md` § 4 — insert between current limitations block and Project Structure):**
+```markdown
+#### Discriminative features (for A/B recipe comparison)
+
+The evaluator ships signal-extraction features tuned for A/B recipe comparison:
+
+- **Wilson 95% confidence intervals** per category-difficulty bucket — shows whether a 2 % gap is meaningful or noise within ±6.8 % (N=210).
+- **McNemar's paired test** on `--compare` runs — surfaces which side wins significantly (p < 0.05) and prints a per-question diff table.
+- **`--samples N`** for pass@k (e.g. `--samples 3`) — unbiased pass@1 vs pass@k per challenge; pass@3 typically jumps 5-15 % on hard problems.
+- **Contamination check** at startup — SHA256 hash overlap between bench prompts and training corpus (> 5 % triggers a warning).
+- **Suspicious-memorization flag** — marks any response containing writeup markers ("Hack The Box", "writeup from", "walkthrough" etc.) so model outputs can be filtered pre-scoring.
+```
+
+**Verify.**
+```bash
+for kw in Wilson McNemar --samples contamination "suspicious-memorization"; do
+    c=$(grep -c "$kw" README.md)
+    echo "$kw: $c mentions"
+    [ "$c" -ge 1 ] || echo "  ⚠  $kw not mentioned in README"
+done
+```
+
+**Effort:** ~12 LoC, 5 min.
+
+---
+
+### D7 (MED) — README § 2 "Data Processing" — mention `--no-system-prompt` savings
+
+**Why.** `AGENTS.md` documents that `process_data.py --no-system-prompt` saves ~6.2M characters across a 17K-example corpus (system prompts apply via `tokenizer.chat_template` at training time). README doesn't mention this — users running `process_data.py` with the default flag produce a 30–40 % larger processed dataset unnecessarily.
+
+**Fix (`README.md` § 2 "Data Processing", after the Alpaca→ChatML section):**
+```markdown
+> 💡 **Tip:** pass `--no-system-prompt` to `process_data.py` to skip inlining per-example system prompts into the ChatML messages. Saves ~6.2 M characters across a 17 K-example corpus. The system prompt is then set once via `tokenizer.chat_template` at training time.
+```
+
+**Verify.**
+```bash
+grep -nE 'no-system-prompt|6\.2' README.md
+# expected: ≥ 1 match
+```
+
+**Effort:** ~8 LoC, 3 min.
+
+---
+
+### D8 (MED) — `--two-stage` documentation reconcile
+
+**Why.** `AGENTS.md` § "Two-stage training (experimental)" documents:
+```bash
+TWO_STAGE=true ./finetune.sh qwen35 --all
+# or manually:
+uv run src/train.py --model qwen35 --data data/merged/train.jsonl --two-stage
+```
+
+But it's not clear whether `src/train.py` actually accepts `--two-stage`, whether `TWO_STAGE` env var propagates through `finetune.sh`, or whether the two-stage path is wired to `_build_curated_subset` (which *is* in `src/train.py` per recent commits). If the flag is unimplemented, this is dead documentation. Either way, the doc/code contract is unclear.
+
+**Fix (verify first, then reconcile):**
+```bash
+grep -nE 'two[_-]stage|TWO_STAGE' src/train.py finetune.sh
+```
+
+Three resolution paths based on grep:
+
+**(a) Both flags wired** — no doc change. Add to AGENTS.md as a TODO note: *"Verified working: src/train.py:NNN accepts `--two-stage`; finetune.sh:NNN honors `TWO_STAGE=true`."*
+
+**(b) Only one wired** — fix the doc to match the implementation, remove the broken call. Add to AGENTS.md Known Gotchas: *"Only `<form>` is supported for two-stage training. Use `<form>` not the other."*
+
+**(c) Neither wired** — remove the entire § "Two-stage training (experimental)" block from AGENTS.md. Move it to "Backlog" with a note that the curated-subset infrastructure exists in `src/train.py:_build_curated_subset` but is not yet wired to a flag.
+
+**Verify.**
+```bash
+uv run src/train.py --help 2>&1 | grep -i 'two.stage'
+# confirm implementation
+grep -nE 'TWO_STAGE|two[_-]stage' finetune.sh
+# confirm shell wiring
+```
+
+**Effort:** ~5 LoC, 5 min (depending on resolution path).
+
+---
+
+### D9 (MED) — Accessibility: ARIA labels for mobile toggle + sidebar SVGs
+
+**Why.** `docs/index.html`:
+- The mobile toggle `<button>` (≈line 172) has no `aria-label`. Screen reader announces only "button" with no purpose.
+- All 7 sidebar `<svg>` icons inside `<a>` tags lack `aria-hidden="true"`. Screen reader tries to read SVG path data out loud.
+- `<main>` lacks `aria-labelledby` or `role="main"` (the default `main` element infers `role=main` — but for older AT, explicit is better).
+
+A keyboard-only or screen-reader user can't navigate the site effectively.
+
+**Fix (`docs/index.html`):**
+
+1. Mobile toggle (≈line 172):
+```diff
+- <button class="mobile-toggle" onclick="...">&#9776;</button>
++ <button class="mobile-toggle" onclick="..." aria-label="Toggle mobile menu" aria-controls="sidebar">&#9776;</button>
+```
+
+2. Each of the 7 sidebar `<svg>` (≈line 186–225):
+```diff
+- <span class="icon"><svg viewBox="0 0 24 24" fill="none" ...
++ <span class="icon"><svg viewBox="0 0 24 24" fill="none" ... aria-hidden="true" focusable="false">
+```
+
+3. Optional: each `<a href="#x">` add `aria-label="Go to <Section> section"` (less critical — adjacent text labels them already, but reinforces).
+
+4. Add `<a class="skip-link" href="#hero">Skip to content</a>` immediately after `<body>` opening tag, hidden by default and shown on focus:
+```css
+.skip-link { position: absolute; left: -9999px; }
+.skip-link:focus { left: 8px; top: 8px; background: var(--purple); color: var(--bg); padding: 8px 12px; z-index: 1300; }
+```
+
+**Verify.**
+- `grep -nE 'aria-(label|hidden|labelledby)' docs/index.html` → ≥ 9 matches.
+- Manual: open in browser, tab through → screen reader reads "Toggle mobile menu, button", all section labels spoken naturally, no SVG path data read aloud.
+- Lighthouse a11y audit: ≥ 95.
+
+**Effort:** ~8 LoC, 5 min.
+
+---
+
+### D10 (MED) — SEO: Open Graph + Twitter Card meta tags
+
+**Why.** `docs/index.html` `<head>` has only title, description, theme-color, and JetBrains Mono preconnect. No Open Graph or Twitter Card meta. Sharing the page on Twitter/X, LinkedIn, Slack, Discord renders with no preview — bare URL or no image. The site is hosted via GitHub Pages (`https://yuzu-octopus.github.io/CTF-LLM/` per the README repo URL), and social sharing is the natural discovery channel for an OSS AI project.
+
+**Fix (`docs/index.html` `<head>`, immediately after `<meta name="theme-color" ...>`):**
+```html
+<!-- Open Graph -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="CTF-LLM | Fine-tune LLMs for CTF Challenges">
+<meta property="og:description" content="End-to-end pipeline for fine-tuning open-source LLMs (Gemma 4, Qwen 3.5) on cybersecurity CTF challenges using Unsloth + QLoRA on Google Colab's free T4 GPU.">
+<meta property="og:url" content="https://yuzu-octopus.github.io/CTF-LLM/">
+<meta property="og:image" content="https://yuzu-octopus.github.io/CTF-LLM/og-image.png">
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="CTF-LLM | Fine-tune LLMs for CTF Challenges">
+<meta name="twitter:description" content="End-to-end pipeline for fine-tuning open-source LLMs on CTF challenges using Unsloth + QLoRA on Google Colab T4.">
+<meta name="twitter:image" content="https://yuzu-octopus.github.io/CTF-LLM/og-image.png">
+```
+
+*Note: requires creating `og-image.png` (1200×630 recommended) as a follow-up. This item covers only the meta tags; the PNG is the asset-creation follow-up.*
+
+**Verify.**
+- `grep -nE 'og:(title|description|image)|twitter:(card|title|description|image)' docs/index.html` → 7 matches (1 `og:type` + 3 `og:` properties + 4 `twitter:` is 8 — adjust grep accordingly).
+- After deploy: https://www.opengraph.xyz/ → paste URL, confirm preview card renders with image.
+
+**Effort:** ~12 LoC, 5 min (excluding PNG creation).
+
+---
+
+### D11 (LOW) — Firefox scrollbar CSS
+
+**Why.** `docs/index.html` styles scrollbars only with WebKit pseudo-elements (`::-webkit-scrollbar`, `-webkit-scrollbar-track`, etc.). Firefox ignores those and shows default native scrollbars that clash with the Dracula theme (slate grey rather than on-brand). Safari/iOS hits the same gap.
+
+**Fix (`docs/index.html` `<style>` block, insert at the top of the scrollbar section, before the `::-webkit-scrollbar` rules):**
+```css
+html {
+  scrollbar-width: thin;
+  scrollbar-color: var(--panel) var(--bg);
+}
+```
+
+**Verify.**
+- `grep -nE 'scrollbar-(width|color)' docs/index.html` → ≥ 2 matches.
+- Manual: open URL in Firefox → scrollbar is thin, panel-coloured, matches theme.
+
+**Effort:** ~2 LoC, 1 min.
+
+---
+
+## Section G — Updated execution roadmap (T1–T3 + D1–D11)
+
+| Session | Items | Effort | Outcome |
+|---------|-------|--------|---------|
+| **1 — TODAY** | T1.1, T1.3, T1.4, T1.5 | ~35 LoC, ~25 min | Feedback + per-difficulty CI + length-bias probe + cheating flag live. Debugability doubled. |
+| **2 — TODAY (separate commit)** | D1, D2, D3, D4, D5, D6, D7, D8, D9, D10, D11 | ~104 LoC, ~45 min | Doc-truth alignment across website, README, AGENTS. Site accurate, accessible, shareable. |
+| **3 — This week** | T1.2 (`--samples`) | ~30 LoC, ~20 min | pass@3 hard-task discrimination. A/B recipe comparison meaningful. |
+| **4 — Next week** | T2.1, T2.3 | ~60 LoC, 1 h curation | Functional correctness on code tasks; contamination check at startup. |
+| **5 — Later** | T2.2, T2.4, T3.1, T3.2, T3.3 | ~150 LoC + 4 h curation | Partial credit + 6 discriminative task types. Publication-grade. |
+
+Doc-side (D-block) is fully orthogonal to T-block. Ship in parallel commits. T-block requires pytest validation; D-block requires only manual review of the rendered HTML.
+
+---
+
+## Section H — Verification matrix for D-block (Section F audit items)
+
+| Signal | Source | Check command | Decision criterion |
+|--------|--------|---------------|-------------------|
+| Benchmark-size consistency | D1 | `grep -nE '200.question\|N=200\|50.question' README.md AGENTS.md` | 0 matches outside this plan file |
+| Models table accuracy | D2 | `grep -cE 'Fast Mode\|Quality Mode' docs/index.html` | ≥ 2 hits |
+| VRAM accuracy | D3 | `grep -nE '~14GB' docs/index.html README.md AGENTS.md` | 0 matches; `~11GB` present |
+| Task-type list alignment | D4 | per-type `grep -c '<type>' docs/index.html README.md` | all 6 types ≥ 2 mentions across the 2 files |
+| README § 5 completeness | D5 | `grep -cE 'MODEL_CONFIGS\|finetune\.sh model' README.md` | ≥ 2 mentions total |
+| Section 4 features surfaced | D6 | per-keyword `grep -cE 'Wilson\|McNemar\|--samples\|contamination\|suspicious' README.md` | ≥ 1 each |
+| Doc-truth signal | D7 | `grep -cE 'no-system-prompt\|6\.2' README.md` | ≥ 1 mention |
+| Two-stage reconcile | D8 | `grep -nE 'two[_-]stage\|TWO_STAGE' src/train.py finetune.sh AGENTS.md` | 3-way OR consistent |
+| ARIA completeness | D9 | `grep -cE 'aria-(label\|hidden)' docs/index.html` | ≥ 9 mentions |
+| OG meta present | D10 | `grep -cE 'og:(title\|description\|image\|url)\|twitter:(card\|title\|description\|image)' docs/index.html` | ≥ 7 matches |
+| Firefox scrollbar styling | D11 | `grep -cE 'scrollbar-(width\|color)' docs/index.html` | ≥ 2 matches |
+
+After the D-block commit passes this matrix: **website, README, and AGENTS.md all tell the same story.** Users can trust the docs.
+
+---
+
 ## Out-of-scope (recorded for next round)
 
 - **Subprocess sandbox for code execution** (HumanEval/Docker-style). Needs a real container solution; out of Colab scope.
@@ -518,20 +990,23 @@ Tests reasoning quality before solution: model lists the steps it would take.
 - **Continuous contamination audit against latest-model pretraining data** — outside our compute envelope.
 - **Citation-grounded LLM-as-judge for design-only tasks** (style) — defer until we have an offline judge model (~5B parameters) that fits alongside.
 - **Automated benchmark regeneration** — would let `gen_eval_bench.py` produce questions from latest CTF event writeups; needs scraping infra.
+- **Creation of `og-image.png` asset** — D10 meta tags ship first; PNG asset is a follow-up, ~30 min design work.
+- **Markdown lint/pre-commit hook** — would catch future cross-doc drift automatically. Recommended add-on once D-block ships.
 
 ---
 
-## Verification matrix (after Session 4)
+## Verification matrix (after Session 2 + D-block)
 
 | Signal | Source | What to check | Decision criteria |
 |--------|--------|---------------|-------------------|
-| Per-bucket acc ± Wilson CI | `print_results` | Bucket means + CI widths | Bucket CI should not exceed ±15% on ≥20 questions per bucket |
-| Pass@3 vs Pass@1 | `--samples 3` | pass@3 - pass@1 gap | Should be 3-15% on hard, 0-5% on easy |
+| Per-bucket acc ± Wilson CI | `print_results` | Bucket means + CI widths | Bucket CI should not exceed ±15 % on ≥20 questions per bucket |
+| Pass@3 vs Pass@1 | `--samples 3` | pass@3 − pass@1 gap | Should be 3-15 % on hard, 0-5 % on easy |
 | Length bias | T1.4 | correct/wrong length ratio | Should be 0.67 < ratio < 1.5 |
-| Cheating flag | T1.5 | suspicious_memorization count | Should be < 5% per model |
+| Cheating flag | T1.5 | suspicious_memorization count | Should be < 5 % per model |
 | Subtask partial credit | T2.2 | mean subtask score | Mean should rise monotonic across recipe improvements |
-| Contamination % | T2.3 | Bench ∩ Train overlap | Should be < 5% always |
-| Difficulty-balanced acc | T2.4 | Balanced mean accuracy | All 3 difficulties should converge in ±5% (no easy-bucket dominance) |
+| Contamination % | T2.3 | Bench ∩ Train overlap | Should be < 5 % always |
+| Difficulty-balanced acc | T2.4 | Balanced mean accuracy | All 3 difficulties should converge in ±5 % (no easy-bucket dominance) |
 | Cross-recipe McNemar's | `--compare` | chi² + p-value | p < 0.05 → "significantly better" |
+| Site-truth consistency | Section H | All 11 D-block signals green | All 11 should pass before any new model version is published |
 
-Total discrimination power after Session 4: **~-3.7% accuracy resolution between recipes at 95% CI**, sufficient to defend "best possible" claims.
+Total discrimination power after Session 5: **~-3.7 % accuracy resolution between recipes at 95 % CI**, sufficient to defend "best possible" claims — *and* the documentation matches the code at every step.
