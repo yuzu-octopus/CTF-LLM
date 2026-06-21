@@ -1,6 +1,0 @@
-title: CTF-LLM
-description: Fine-tune LLMs to solve CTF challenges with Unsloth + QLoRA
-theme: minima
-author: yuzu-octopus
-sass:
-  style: compressed

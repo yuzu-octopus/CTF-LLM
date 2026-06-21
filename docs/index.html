@@ -1,0 +1,522 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CTF-LLM | Fine-tune LLMs for CTF Challenges</title>
+  <meta name="description" content="End-to-end pipeline for fine-tuning open-source LLMs on CTF challenges using Unsloth and QLoRA.">
+  <meta name="theme-color" content="#282a36">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #282a36;
+      --panel: #44475a;
+      --fg: #f8f8f2;
+      --muted: #6272a4;
+      --purple: #bd93f9;
+      --pink: #ff79c6;
+      --cyan: #8be9fd;
+      --green: #50fa7b;
+      --orange: #ffb86c;
+      --red: #ff5555;
+      --yellow: #f1fa8c;
+      --font: 'JetBrains Mono', monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--fg);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    a { color: var(--cyan); text-decoration: none; }
+    a:hover { color: var(--pink); }
+
+    h1, h2, h3, h4 { font-weight: 700; }
+
+    /* Sidebar */
+    .sidebar {
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      width: 240px;
+      background: var(--panel);
+      border-right: 1px solid var(--muted);
+      display: flex;
+      flex-direction: column;
+      padding: 24px 16px;
+      z-index: 100;
+    }
+
+    .sidebar-brand {
+      text-align: center;
+      margin-bottom: 16px;
+    }
+
+    .sidebar-brand .logo {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 8px;
+      background: var(--purple);
+      color: var(--bg);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+
+    .sidebar-brand .name {
+      color: var(--purple);
+      font-size: 1.1rem;
+      font-weight: 700;
+    }
+
+    .sidebar-brand .tagline {
+      color: var(--muted);
+      font-size: 0.7rem;
+      margin-top: 2px;
+    }
+
+    .sidebar-divider {
+      border: none;
+      border-top: 1px solid var(--muted);
+      margin: 12px 0;
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      list-style: none;
+    }
+
+    .sidebar-nav li {
+      margin: 2px 0;
+    }
+
+    .sidebar-nav a {
+      display: block;
+      padding: 8px 12px;
+      color: var(--fg);
+      font-size: 0.8rem;
+      border-left: 3px solid transparent;
+      transition: all 0.15s;
+    }
+
+    .sidebar-nav a:hover {
+      background: var(--bg);
+      border-left-color: var(--purple);
+      color: var(--purple);
+    }
+
+    .sidebar-footer {
+      font-size: 0.7rem;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .sidebar-footer a {
+      color: var(--purple);
+    }
+
+    /* Main content */
+    .main {
+      margin-left: 240px;
+      min-height: 100vh;
+    }
+
+    /* Sections */
+    section {
+      min-height: 100vh;
+      padding: 60px 40px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    section:nth-child(odd) { background: var(--bg); }
+    section:nth-child(even) { background: var(--panel); }
+
+    /* Section heading */
+    h2 {
+      color: var(--purple);
+      border-bottom: 2px solid var(--purple);
+      padding-bottom: 8px;
+      font-size: 1.6rem;
+      margin-bottom: 24px;
+    }
+
+    /* Hero */
+    .hero {
+      text-align: center;
+    }
+
+    .hero h1 {
+      font-size: 3.5rem;
+      color: var(--purple);
+      margin-bottom: 12px;
+    }
+
+    .hero .tagline {
+      font-size: 1.2rem;
+      color: var(--fg);
+      margin-bottom: 16px;
+    }
+
+    .hero .subtitle {
+      font-size: 0.9rem;
+      color: var(--muted);
+      max-width: 600px;
+      margin: 0 auto 32px;
+    }
+
+    .cta {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 8px 16px;
+      font-size: 0.8rem;
+      border: 1px solid var(--muted);
+      border-radius: 4px;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: var(--purple);
+      color: var(--bg);
+      border-color: var(--purple);
+    }
+
+    .btn-primary:hover {
+      background: var(--pink);
+      border-color: var(--pink);
+    }
+
+    .btn-outline {
+      color: var(--cyan);
+      border-color: var(--cyan);
+    }
+
+    .btn-outline:hover {
+      color: var(--pink);
+      border-color: var(--pink);
+    }
+
+    /* Card grid */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      background: var(--bg);
+      border: 1px solid var(--muted);
+      border-radius: 8px;
+      padding: 20px;
+      transition: border-color 0.2s;
+    }
+
+    .card:hover {
+      border-color: var(--purple);
+    }
+
+    .card h3 {
+      color: var(--purple);
+      font-size: 0.95rem;
+      margin-bottom: 8px;
+    }
+
+    .card p {
+      color: var(--fg);
+      font-size: 0.8rem;
+    }
+
+    .card .accent-cyan { color: var(--cyan); }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--bg);
+      border: 1px solid var(--muted);
+      border-radius: 8px;
+      overflow: hidden;
+      font-size: 0.8rem;
+    }
+
+    th, td {
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--muted);
+    }
+
+    th {
+      background: var(--panel);
+      color: var(--fg);
+      font-weight: 700;
+    }
+
+    tr:last-child td { border-bottom: none; }
+
+    tr:hover td { background: var(--panel); }
+
+    .status-comfortable { color: var(--green); }
+    .status-tight { color: var(--orange); }
+
+    /* Code blocks */
+    pre {
+      background: var(--bg);
+      border: 1px solid var(--muted);
+      border-radius: 6px;
+      padding: 16px;
+      overflow-x: auto;
+    }
+
+    pre code {
+      color: var(--green);
+      font-size: 0.8rem;
+      line-height: 1.6;
+    }
+
+    code {
+      font-family: var(--font);
+      color: var(--green);
+      background: var(--panel);
+      padding: 1px 6px;
+      border-radius: 3px;
+      font-size: 0.8em;
+    }
+
+    pre code {
+      background: transparent;
+      padding: 0;
+    }
+
+    /* Stats list */
+    .stats {
+      list-style: none;
+      padding: 0;
+    }
+
+    .stats li {
+      padding: 8px 0;
+      border-bottom: 1px solid var(--muted);
+      color: var(--fg);
+      font-size: 0.85rem;
+    }
+
+    .stats li:last-child { border-bottom: none; }
+
+    .stats li strong { color: var(--purple); }
+
+    /* Stack badges */
+    .stack {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .stack .badge {
+      background: var(--bg);
+      border: 1px solid var(--muted);
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      color: var(--fg);
+    }
+
+    .stack .badge strong { color: var(--purple); }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--panel); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+    /* Mobile */
+    .mobile-toggle {
+      display: none;
+      position: fixed;
+      top: 12px;
+      left: 12px;
+      z-index: 200;
+      background: var(--panel);
+      border: 1px solid var(--muted);
+      color: var(--fg);
+      padding: 8px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    @media (max-width: 900px) {
+      .sidebar { display: none; }
+      .main { margin-left: 0; }
+      .mobile-toggle { display: block; }
+      .sidebar.open { display: flex; width: 240px; }
+      .main.shifted { margin-left: 240px; }
+    }
+  </style>
+</head>
+<body>
+
+<button class="mobile-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open'); document.querySelector('.main').classList.toggle('shifted');">☰</button>
+
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <div class="logo">C</div>
+    <div class="name">CTF-LLM</div>
+    <div class="tagline">fine-tune · CTF · qLoRA</div>
+  </div>
+  <hr class="sidebar-divider">
+  <ul class="sidebar-nav">
+    <li><a href="#hero">Home</a></li>
+    <li><a href="#features">Features</a></li>
+    <li><a href="#models">Models</a></li>
+    <li><a href="#modes">Modes</a></li>
+    <li><a href="#benchmark">Benchmark</a></li>
+    <li><a href="#quickstart">Quick Start</a></li>
+    <li><a href="#stack">Stack</a></li>
+  </ul>
+  <hr class="sidebar-divider">
+  <div class="sidebar-footer">
+    <a href="https://github.com/yuzu-octopus/CTF-LLM">GitHub</a>
+    <br><br>
+    Apache 2.0
+  </div>
+</aside>
+
+<main class="main">
+
+  <section id="hero" class="hero">
+    <div class="container">
+      <h1>CTF-LLM</h1>
+      <p class="tagline">Fine-tune LLMs to solve CTF challenges</p>
+      <p class="subtitle">End-to-end pipeline for cybersecurity CTF and competitive programming using Unsloth + QLoRA on Google Colab's free T4 GPU.</p>
+      <div class="cta">
+        <a href="https://github.com/yuzu-octopus/CTF-LLM" class="btn btn-primary">View on GitHub</a>
+        <a href="#quickstart" class="btn btn-outline">Quick Start</a>
+      </div>
+    </div>
+  </section>
+
+  <section id="features">
+    <div class="container">
+      <h2>Features</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>End-to-end Pipeline</h3>
+          <p>Scrapes CTF writeups from 13 GitHub repos, downloads curated HuggingFace datasets, processes to ChatML, trains with Unsloth QLoRA, evaluates on a 210-question benchmark.</p>
+        </div>
+        <div class="card">
+          <h3>4 Models Supported</h3>
+          <p>Gemma 4 E4B, Gemma 4 12B, Qwen 3.5 9B, Qwen 3.5 4B — all running 4-bit QLoRA on a free T4 GPU (16GB VRAM).</p>
+        </div>
+        <div class="card">
+          <h3>210-Question Benchmark</h3>
+          <p>Curated evaluation set across 4 categories (pwn, rev, crypto, web) and 3 difficulty levels with Wilson 95% CI and McNemar's test.</p>
+        </div>
+        <div class="card">
+          <h3>Colab-Ready</h3>
+          <p>Single <code>finetune.sh</code> handles session creation, dependency install, file upload, training, and model download.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="models">
+    <div class="container">
+      <h2>Supported Models</h2>
+      <table>
+        <thead>
+          <tr><th>Model</th><th>Parameters</th><th>LoRA Rank</th><th>VRAM (T4)</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Gemma 4 E4B</td><td>~4.5B</td><td>32</td><td>~10GB</td><td class="status-comfortable">Comfortable</td></tr>
+          <tr><td>Gemma 4 12B</td><td>~12B</td><td>32</td><td>~14GB</td><td class="status-tight">Tight</td></tr>
+          <tr><td>Qwen 3.5 9B</td><td>~9B</td><td>32</td><td>~12GB</td><td class="status-comfortable">Comfortable</td></tr>
+          <tr><td>Qwen 3.5 4B</td><td>~4B</td><td>8</td><td>~8GB</td><td class="status-comfortable">Comfortable</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="modes">
+    <div class="container">
+      <h2>Training Modes</h2>
+      <table>
+        <thead>
+          <tr><th>Parameter</th><th>Fast (~30 min)</th><th>Quality (~50-70 min)</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Dataset</td><td>~500 examples</td><td>2500+ examples</td></tr>
+          <tr><td>LoRA rank</td><td>8</td><td>32</td></tr>
+          <tr><td>Max seq length</td><td>2048</td><td>4096</td></tr>
+          <tr><td>Epochs</td><td>1</td><td>2</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="benchmark">
+    <div class="container">
+      <h2>Benchmark Stats</h2>
+      <p style="margin-bottom: 20px;"><strong style="color: var(--purple);">210 questions</strong> across 4 categories and 3 difficulty levels.</p>
+      <ul class="stats">
+        <li><strong>Categories</strong> &mdash; pwn (57), rev (50), crypto (50), web (53)</li>
+        <li><strong>Difficulties</strong> &mdash; easy (72), medium (79), hard (59)</li>
+        <li><strong>Task types</strong> &mdash; flag_extraction, code_generation, vulnerability_identification, patch_generation, exploit_trace</li>
+        <li><strong>Statistical rigor</strong> &mdash; Wilson 95% CI, McNemar's test, contamination check, cheating detection</li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="quickstart">
+    <div class="container">
+      <h2>Quick Start</h2>
+      <pre><code># 1. Install dependencies
+uv sync
+
+# 2. Run full pipeline (build data + train)
+./finetune.sh gemma4 --all
+
+# 3. Evaluate
+./finetune.sh gemma4 --eval</code></pre>
+    </div>
+  </section>
+
+  <section id="stack">
+    <div class="container">
+      <h2>Tech Stack</h2>
+      <div class="stack">
+        <span class="badge"><strong>Unsloth</strong> &mdash; QLoRA fine-tuning</span>
+        <span class="badge"><strong>PyTorch</strong> &mdash; deep learning</span>
+        <span class="badge"><strong>HuggingFace</strong> &mdash; datasets + models</span>
+        <span class="badge"><strong>Google Colab</strong> &mdash; free T4 GPU</span>
+        <span class="badge"><strong>uv</strong> &mdash; Python package manager</span>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+</body>
+</html>
