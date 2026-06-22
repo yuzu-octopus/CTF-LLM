@@ -57,3 +57,31 @@ Generated from `/improve` audit against commit `6d7af02`. All 7 plans shipped in
 
 - **More sidebar CSS tuning**: Already iterated 5+ rounds; remaining differences (icon style, line-height) are within acceptable variance. Diminishing returns.
 - **Training pipeline tests (train.py)**: Requires GPU hardware ($250+/mo Colab Pro). Not testable in CI.
+
+## Current /improve cycle (audited, plans written)
+
+Generated from `/improve deep` audit against commit `0831d17`. Scope: website UX, training pipeline, performance/methodology, datasets.
+
+### Execution Order
+
+| # | Plan | Dependencies | Status |
+|---|------|-------------|--------|
+| 16 | Website UX/UI hardening | None | TODO |
+| 17 | Pipeline critical fixes | None | TODO |
+| 18 | Training quality & performance | None | TODO |
+| 19 | Dataset quality overhaul | Must run after 017 (pipeline fixes first) | TODO |
+
+### Dependency notes
+
+- Plans 16, 17, 18 are independent — can be parallelized
+- Plan 19 depends on 017 (pipeline fixes create correct data processing before data regen)
+- All plans need the test suite to pass before and after
+
+### Summary of findings
+
+| Area | Plans | Severity | Top findings |
+|------|-------|----------|-------------|
+| **A — Website UX** | 016 | 2 P1, 5 P2 | Mobile hamburger z-index bug, contrast failures, no focus-visible |
+| **B — Pipeline bugs** | 017 | 3 CRIT, 8 HIGH | datasets version nonexistent, Gemma notebook crashes, two-stage format mismatch |
+| **C — Training quality** | 018 | 5 MED-HIGH | CLI path missing weight_decay/NEFTune/cosine LR; config drift; no flash-attn |
+| **D — Dataset quality** | 019 | 4 CRIT, 2 HIGH | 76% of writeup data has wrong system prompt; dedup misses cross-repo dupes; crash in error handler |
