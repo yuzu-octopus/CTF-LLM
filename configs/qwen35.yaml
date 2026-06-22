@@ -1,6 +1,6 @@
-# Default: quality mode (r=32, alpha=64). Fast mode (r=8, alpha=16) is
+# Default: quality mode (r=32, alpha=32). Fast mode (r=8, alpha=8) is
 # controlled by the notebook MODEL_CONFIGS dict; override via --mode fast.
-# Qwen 3.5 9B Configuration
+# Qwen 3.5 9B Configuration — Unsloth recommended: alpha == r (1:1)
 # QLoRA with load_in_4bit=True works on T4 (~6GB weights)
 model:
   name: unsloth/Qwen3.5-9B
@@ -13,19 +13,23 @@ model:
     - up_proj
     - down_proj
   r: 32
-  lora_alpha: 64
+  lora_alpha: 32
   lora_dropout: 0
   bias: none
   max_seq_length: 4096
   batch_size: 1
   load_in_4bit: true
-  use_rslora: true
+  use_rslora: false
   use_gradient_checkpointing: unsloth
 
 training:
   num_train_epochs: 3
-  learning_rate: 1.0e-4
+  learning_rate: 2.0e-4
   warmup_ratio: 0.05
+  weight_decay: 0.001
+  max_grad_norm: 0.3
+  lr_scheduler_type: cosine
+  neftune_noise_alpha: 5
   gradient_accumulation_steps: 8
   optim: adamw_8bit
   seed: 3407
