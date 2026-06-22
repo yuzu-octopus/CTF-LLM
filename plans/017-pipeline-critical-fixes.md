@@ -113,13 +113,12 @@ Option (a) is cleaner:
 epochs = epochs or training_config.get("num_train_epochs", 3)
 ```
 
-### Step 8: Sync grad_accum and use_rslora between configs and notebook
+### Step 8: Sync grad_accum between configs and notebook
 
 Fix `configs/gemma4.yaml` quality defaults to match notebook:
-- `use_rslora: true` (was `false`)
-- Keep grad_accum at 4 or bump to 8 to match notebook
+- Set `use_rslora: false` (matching Unsloth's own example — rsLoRA helps most at r≥64, not r=32)
 
-This ensures `finetune.sh --train` produces the same results as notebook training.
+This ensures `finetune.sh --train` behaves consistently with Unsloth's recommended defaults.
 
 ### Step 9: Verify
 
