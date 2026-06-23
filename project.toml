@@ -8,15 +8,15 @@ page_url = "https://yuzu-octopus.github.io/CTF-LLM/"
 quickstart_url = "#quickstart"
 logo_svg = """
 <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-  <rect width="64" height="64" rx="12" fill="#44475a"/>
-  <path d="M18 12h28l-6 20 6 20H18l6-20-6-20z" fill="#bd93f9"/>
-  <path d="M22 16h20l-4 16 4 16H22l4-16-4-16z" fill="#50fa7b" opacity="0.8"/>
+  <rect width="64" height="64" rx="14" fill="#44475a"/>
+  <path d="M32 8 L48 18 L48 34 C48 46 32 56 32 56 C32 56 16 46 16 34 L16 18 Z" fill="none" stroke="#bd93f9" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M26 34 L30 26 L34 38 L38 30" fill="none" stroke="#50fa7b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>"""
 favicon_data = """
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
   <rect width="64" height="64" rx="10" fill="#282a36"/>
-  <path d="M16 10h32l-8 12 8 12H16z" fill="#bd93f9"/>
-  <path d="M16 34h32l-8 12 8 12H16z" fill="#50fa7b" opacity="0.8"/>
+  <path d="M32 10 L46 18 L46 34 C46 44 32 54 32 54 C32 54 18 44 18 34 L18 18 Z" fill="#bd93f9" opacity="0.9"/>
+  <path d="M28 32 L32 26 L36 36 L40 28" fill="none" stroke="#282a36" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>"""
 
 [brand]
