@@ -120,6 +120,9 @@
 
     .sidebar-nav {
       flex: 1;
+    }
+
+    .sidebar-nav ul {
       list-style: none;
     }
 
@@ -199,7 +202,7 @@
     }
 
     .hero h1 {
-      font-size: 3.5rem;
+      font-size: 3rem;
       color: var(--purple);
       margin-bottom: 12px;
     }
@@ -242,7 +245,7 @@
     .btn-primary:hover {
       background: var(--pink);
       border-color: var(--pink);
-      color: var(--bg);
+      color: var(--fg);
     }
 
     .btn-outline {
@@ -427,8 +430,10 @@
       background: var(--panel);
       border: 1px solid var(--muted);
       color: var(--fg);
-      padding: 12px 14px;
-      border-radius: 50%;
+      padding: 10px 12px;
+      min-width: 44px;
+      min-height: 44px;
+      border-radius: 6px;
       cursor: pointer;
       transition: background 250ms cubic-bezier(0.4, 0, 0.2, 1);
     }
@@ -449,9 +454,8 @@
       .sidebar { display: none; }
       .main { margin-left: 0; }
       .mobile-toggle { display: block; }
-      .sidebar.open { display: flex; width: 240px; }
+      .sidebar.open { display: flex; }
       .sidebar-overlay.open { display: block; }
-      .main.shifted { margin-left: 240px; }
     }
   </style>
 </head>
@@ -463,7 +467,7 @@
 <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
 <a class="skip-link" href="#main-content">Skip to content</a>
 
-<aside class="sidebar">
+<aside class="sidebar" id="sidebar">
   <div class="sidebar-brand">
     <div class="logo"><svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
   <rect width="64" height="64" rx="14" fill="#44475a"/>
@@ -474,47 +478,47 @@
     <div class="tagline">fine-tune · CTF · qLoRA</div>
   </div>
   <hr class="sidebar-divider">
-  <nav aria-label="Main navigation">
-    <ul class="sidebar-nav">
+  <nav class="sidebar-nav" aria-label="Main navigation">
+    <ul>
       <li><a href="#hero"><span class="icon">
 
-<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M10,20V14H14V20H19V12H22L12,3L2,12H5V20H10Z"/></svg>
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 12l9-9 9 9"/><path d="M5 10v9a1 1 0 0 0 1 1h3v-5h6v5h3a1 1 0 0 0 1-1v-9"/></svg>
 
 </span> Home</a></li>
       
       <li><a href="#features"><span class="icon">
 
-<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M3,3H11V11H3V3M3,13H11V21H3V13M13,3H21V11H13V3M13,13H21V21H13V13Z"/></svg>
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
 
 </span> Features</a></li>
       
       <li><a href="#models"><span class="icon">
 
-<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M17,7A2,2 0 0,1 19,9V17A2,2 0 0,1 17,19H7A2,2 0 0,1 5,17V9A2,2 0 0,1 7,7H17M7,9V17H17V9H7M12,2A2,2 0 0,1 14,4V6H15V4A3,3 0 0,0 12,1A3,3 0 0,0 9,4V6H10V4A2,2 0 0,1 12,2Z"/></svg>
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="5" y="5" width="14" height="14" rx="2"/><rect x="8" y="8" width="8" height="8" rx="1"/><path d="M5 10H3"/><path d="M5 14H3"/><path d="M21 10h-2"/><path d="M21 14h-2"/><path d="M10 3v2"/><path d="M14 3v2"/><path d="M10 19v2"/><path d="M14 19v2"/></svg>
 
 </span> Supported Models</a></li>
       
       <li><a href="#modes"><span class="icon">
 
-<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M12,16L19.36,10.27L21,9L12,3L3,9L4.63,10.27M12,18.54L4.62,12.81L3,14.07L12,20L21,14.07L19.37,12.8L12,18.54Z"/></svg>
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polygon points="12 2 22 8.5 12 15 2 8.5"/><polyline points="2 15.5 12 22 22 15.5"/><polyline points="2 11.5 12 18 22 11.5"/></svg>
 
 </span> Training Modes</a></li>
       
       <li><a href="#benchmark"><span class="icon">
 
-<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20M10,19L12,17L14,19L15,18L13,16L15,14L14,13L12,15L10,13L9,14L11,16L9,18L10,19Z"/></svg>
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
 
 </span> Benchmark</a></li>
       
       <li><a href="#quickstart"><span class="icon">
 
-<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M8,5.14V19.14L19,12.14L8,5.14Z"/></svg>
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polygon points="6 3 20 12 6 21"/></svg>
 
 </span> Quick Start</a></li>
       
       <li><a href="#stack"><span class="icon">
 
-<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M12,16L19.36,10.27L21,9L12,3L3,9L4.63,10.27M12,18.54L4.62,12.81L3,14.07L12,20L21,14.07L19.37,12.8L12,18.54Z"/></svg>
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polygon points="12 2 22 8.5 12 15 2 8.5"/><polyline points="2 15.5 12 22 22 15.5"/><polyline points="2 11.5 12 18 22 11.5"/></svg>
 
 </span> Tech Stack</a></li>
       
@@ -703,17 +707,14 @@ uv sync
 function toggleSidebar() {
   var btn = document.getElementById('mobile-toggle');
   var sidebar = document.querySelector('.sidebar');
-  var main = document.querySelector('.main');
   var overlay = document.getElementById('sidebar-overlay');
   var open = sidebar.classList.toggle('open');
-  main.classList.toggle('shifted');
   overlay.classList.toggle('open');
   btn.setAttribute('aria-expanded', open);
 }
 
 function closeSidebar() {
   document.querySelector('.sidebar').classList.remove('open');
-  document.querySelector('.main').classList.remove('shifted');
   document.getElementById('sidebar-overlay').classList.remove('open');
   document.getElementById('mobile-toggle').setAttribute('aria-expanded', 'false');
 }
