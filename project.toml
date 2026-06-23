@@ -1,0 +1,129 @@
+[project]
+name = "CTF-LLM"
+tagline = "Fine-tune LLMs to solve CTF challenges"
+subtitle = "End-to-end pipeline for cybersecurity CTF and competitive programming using Unsloth + QLoRA on Google Colab's free T4 GPU."
+description = "Fine-tune open-source LLMs for CTF challenges and competitive programming using Unsloth with QLoRA"
+github_url = "https://github.com/yuzu-octopus/CTF-LLM"
+page_url = "https://yuzu-octopus.github.io/CTF-LLM/"
+quickstart_url = "#quickstart"
+logo_svg = """<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><path d="M16 8v48" stroke="#6272a4" stroke-width="2.5" stroke-linecap="round"/><path d="M16 10h32l-8 10 8 10H16z" fill="#bd93f9"/></svg>"""
+favicon_data = """<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='10' fill='%23282a36'/><path d='M16 8v48' stroke='%236272a4' stroke-width='2'/><path d='M16 10h32l-8 10 8 10H16z' fill='%23bd93f9'/></svg>"""
+og_image = "og-image.png"
+
+[brand]
+tagline = "fine-tune &middot; CTF &middot; qLoRA"
+
+[[sections]]
+id = "features"
+type = "features"
+title = "Features"
+icon = "grid"
+
+[[sections.items]]
+title = "End-to-end Pipeline"
+body = "Scrapes CTF writeups from 13 GitHub repos, downloads curated HuggingFace datasets, processes to ChatML, trains with Unsloth QLoRA, evaluates on a 210-question benchmark."
+
+[[sections.items]]
+title = "4 Models Supported"
+body = "Gemma 4 E4B, Gemma 4 12B, Qwen 3.5 9B, Qwen 3.5 4B — all running 4-bit QLoRA on a free T4 GPU (16GB VRAM)."
+
+[[sections.items]]
+title = "210-Question Benchmark"
+body = "Curated evaluation set across 4 categories (pwn, rev, crypto, web) and 3 difficulty levels with Wilson 95% CI and McNemar's test."
+
+[[sections.items]]
+title = "Colab-Ready"
+body = "Single finetune.sh handles session creation, dependency install, file upload, training, and model download."
+
+[[sections]]
+id = "models"
+type = "table"
+title = "Supported Models"
+icon = "chip"
+headers = ["Model", "Parameters", "Fast Mode (LoRA r)", "Quality Mode (LoRA r)", "VRAM (T4)", "Status"]
+
+[[sections.rows]]
+cells = ["Gemma 4 E4B", "~4.5B", "8", "32", "~10GB", "Comfortable"]
+
+[[sections.rows]]
+cells = ["Gemma 4 12B", "~12B", "8", "32", "~11GB", "Tight"]
+
+[[sections.rows]]
+cells = ["Qwen 3.5 9B", "~9B", "8", "32", "~12GB", "Comfortable"]
+
+[[sections.rows]]
+cells = ["Qwen 3.5 4B", "~4B", "8", "16", "~8GB", "Comfortable"]
+
+[[sections]]
+id = "modes"
+type = "table"
+title = "Training Modes"
+icon = "gear"
+headers = ["Parameter", "Fast (~30 min)", "Quality (~50-70 min)"]
+
+[[sections.rows]]
+cells = ["Dataset", "~500 examples", "2500+ examples"]
+
+[[sections.rows]]
+cells = ["LoRA rank", "8", "32"]
+
+[[sections.rows]]
+cells = ["Max seq length", "2048", "4096"]
+
+[[sections.rows]]
+cells = ["Epochs", "1", "2"]
+
+[[sections]]
+id = "benchmark"
+type = "text"
+title = "Benchmark Stats"
+icon = "layers"
+body = """
+<p style="margin-bottom: 20px;"><strong style="color: var(--purple);">210 questions</strong> across 4 categories and 3 difficulty levels.</p>
+<ul class="stats">
+  <li><strong>Categories</strong> &mdash; pwn (57), rev (50), crypto (50), web (53)</li>
+  <li><strong>Difficulties</strong> &mdash; easy (72), medium (79), hard (59)</li>
+  <li><strong>Task types</strong> &mdash; flag_extraction, multiple_choice, code_generation, vulnerability_identification, patch_generation, exploit_trace</li>
+  <li><strong>Statistical rigor</strong> &mdash; Wilson 95% CI, McNemar's test, contamination check, cheating detection</li>
+</ul>"""
+
+[[sections]]
+id = "quickstart"
+type = "code_block"
+title = "Quick Start"
+icon = "play"
+code = """
+# 1. Install dependencies
+uv sync
+
+# 2. Run full pipeline (build data + train)
+./finetune.sh gemma4 --all
+
+# 3. Evaluate
+./finetune.sh gemma4 --eval"""
+
+[[sections]]
+id = "stack"
+type = "stack"
+title = "Tech Stack"
+icon = "layers"
+
+[[sections.items]]
+name = "Unsloth"
+description = "QLoRA fine-tuning"
+
+[[sections.items]]
+name = "PyTorch"
+description = "deep learning"
+
+[[sections.items]]
+name = "HuggingFace"
+description = "datasets + models"
+
+[[sections.items]]
+name = "Google Colab"
+description = "free T4 GPU"
+
+[[sections.items]]
+name = "uv"
+description = "Python package manager"

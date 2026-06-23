@@ -3,21 +3,23 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CTF-LLM | Fine-tune LLMs for CTF Challenges</title>
-  <meta name="description" content="End-to-end pipeline for fine-tuning open-source LLMs on CTF challenges using Unsloth and QLoRA.">
+  <title>CTF-LLM | Fine-tune LLMs to solve CTF challenges</title>
+  <meta name="description" content="Fine-tune open-source LLMs for CTF challenges and competitive programming using Unsloth with QLoRA">
   <meta name="theme-color" content="#282a36">
-  <!-- Open Graph -->
   <meta property="og:type" content="website">
-  <meta property="og:title" content="CTF-LLM | Fine-tune LLMs for CTF Challenges">
-  <meta property="og:description" content="End-to-end pipeline for fine-tuning open-source LLMs (Gemma 4, Qwen 3.5) on cybersecurity CTF challenges using Unsloth + QLoRA on Google Colab's free T4 GPU.">
+  <meta property="og:title" content="CTF-LLM | Fine-tune LLMs to solve CTF challenges">
+  <meta property="og:description" content="Fine-tune open-source LLMs for CTF challenges and competitive programming using Unsloth with QLoRA">
   <meta property="og:url" content="https://yuzu-octopus.github.io/CTF-LLM/">
+  
   <meta property="og:image" content="https://yuzu-octopus.github.io/CTF-LLM/og-image.png">
-  <!-- Twitter Card -->
+  
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="CTF-LLM | Fine-tune LLMs for CTF Challenges">
-  <meta name="twitter:description" content="End-to-end pipeline for fine-tuning open-source LLMs on CTF challenges using Unsloth + QLoRA on Google Colab T4.">
+  <meta name="twitter:title" content="CTF-LLM | Fine-tune LLMs to solve CTF challenges">
+  <meta name="twitter:description" content="Fine-tune open-source LLMs for CTF challenges and competitive programming using Unsloth with QLoRA">
+  
   <meta name="twitter:image" content="https://yuzu-octopus.github.io/CTF-LLM/og-image.png">
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='10' fill='%23282a36'/%3E%3Cpath d='M16 8v48' stroke='%236272a4' stroke-width='2'/%3E%3Cpath d='M16 10h32l-8 10 8 10H16z' fill='%23bd93f9'/%3E%3C/svg%3E">
+  
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%2064%2064%27%3E%3Crect%20width%3D%2764%27%20height%3D%2764%27%20rx%3D%2710%27%20fill%3D%27%2523282a36%27/%3E%3Cpath%20d%3D%27M16%208v48%27%20stroke%3D%27%25236272a4%27%20stroke-width%3D%272%27/%3E%3Cpath%20d%3D%27M16%2010h32l-8%2010%208%2010H16z%27%20fill%3D%27%2523bd93f9%27/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -54,7 +56,6 @@
 
     h1, h2, h3, h4 { font-weight: 700; }
 
-    /* Sidebar */
     .sidebar {
       position: fixed;
       top: 0; left: 0; bottom: 0;
@@ -158,13 +159,11 @@
       color: var(--purple);
     }
 
-    /* Main content */
     .main {
       margin-left: 240px;
       min-height: 100vh;
     }
 
-    /* Sections — natural content flow, no min-height */
     section {
       padding: 48px 40px;
     }
@@ -174,7 +173,6 @@
       margin: 0 auto;
     }
 
-    /* Section heading — purple text with 2px bottom border */
     h2 {
       color: var(--purple);
       border-bottom: 2px solid var(--purple);
@@ -183,7 +181,6 @@
       margin-bottom: 24px;
     }
 
-    /* Hero */
     .hero {
       text-align: center;
       padding: 80px 40px 48px;
@@ -204,7 +201,7 @@
     .hero .subtitle {
       font-size: 0.9rem;
       color: var(--muted);
-      max-width: 600px;
+      max-width: 650px;
       margin: 0 auto 32px;
     }
 
@@ -246,7 +243,6 @@
       border-color: var(--pink);
     }
 
-    /* Card grid */
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -276,7 +272,6 @@
       font-size: 0.8rem;
     }
 
-    /* Tables */
     table {
       width: 100%;
       border-collapse: collapse;
@@ -306,7 +301,6 @@
     .status-comfortable { color: var(--green); }
     .status-tight { color: var(--orange); }
 
-    /* Code blocks */
     pre {
       background: var(--bg);
       border: 1px solid var(--muted);
@@ -335,7 +329,22 @@
       padding: 0;
     }
 
-    /* Stats list */
+    .steps {
+      list-style: none;
+      padding: 0;
+    }
+
+    .steps li {
+      padding: 10px 0;
+      border-bottom: 1px solid var(--muted);
+      color: var(--fg);
+      font-size: 0.85rem;
+    }
+
+    .steps li:last-child { border-bottom: none; }
+
+    .steps li strong { color: var(--purple); }
+
     .stats {
       list-style: none;
       padding: 0;
@@ -352,7 +361,24 @@
 
     .stats li strong { color: var(--purple); }
 
-    /* Stack badges */
+    .terms {
+      list-style: none;
+      padding: 0;
+    }
+
+    .terms li {
+      padding: 12px 0;
+      border-bottom: 1px solid var(--muted);
+      font-size: 0.85rem;
+    }
+
+    .terms li:last-child { border-bottom: none; }
+
+    .terms li .term {
+      color: var(--purple);
+      font-weight: 700;
+    }
+
     .stack {
       display: flex;
       gap: 8px;
@@ -370,7 +396,6 @@
 
     .stack .badge strong { color: var(--purple); }
 
-    /* Scrollbar */
     ::-webkit-scrollbar { width: 8px; height: 8px; }
     ::-webkit-scrollbar-track { background: var(--bg); }
     ::-webkit-scrollbar-thumb { background: var(--panel); border-radius: 4px; }
@@ -379,7 +404,6 @@
     .skip-link { position: absolute; left: -9999px; }
     .skip-link:focus { left: 8px; top: 8px; background: var(--purple); color: var(--bg); padding: 8px 12px; z-index: 1300; }
 
-    /* Mobile */
     .mobile-toggle {
       display: none;
       position: fixed;
@@ -410,8 +434,9 @@
 </head>
 <body>
 
-<button class="mobile-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open'); document.querySelector('.main').classList.toggle('shifted');" aria-label="Toggle mobile menu" aria-controls="sidebar">&#9776;</button>
 
+
+<button class="mobile-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open'); document.querySelector('.main').classList.toggle('shifted');" aria-label="Toggle mobile menu">&#9776;</button>
 <a class="skip-link" href="#hero">Skip to content</a>
 
 <aside class="sidebar">
@@ -422,34 +447,48 @@
   </div>
   <hr class="sidebar-divider">
   <ul class="sidebar-nav">
-    <li><a href="#hero">
-      <span class="icon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M10,20V14H14V20H19V12H22L12,3L2,12H5V20H10Z"/></svg></span>
-      Home
-    </a></li>
-    <li><a href="#features">
-      <span class="icon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M3,3H11V11H3V3M3,13H11V21H3V13M13,3H21V11H13V3M13,13H21V21H13V13Z"/></svg></span>
-      Features
-    </a></li>
-    <li><a href="#models">
-      <span class="icon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M17,7A2,2 0 0,1 19,9V17A2,2 0 0,1 17,19H7A2,2 0 0,1 5,17V9A2,2 0 0,1 7,7H17M7,9V17H17V9H7M12,2A2,2 0 0,1 14,4V6H15V4A3,3 0 0,0 12,1A3,3 0 0,0 9,4V6H10V4A2,2 0 0,1 12,2Z"/></svg></span>
-      Models
-    </a></li>
-    <li><a href="#modes">
-      <span class="icon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M3,17V19H9V17H3M3,5V7H13V5H3M13,21V19H21V17H13V15H11V21H13M7,9V11H3V13H7V15H9V9H7M21,13V11H11V13H21M15,9H17V7H21V5H17V3H15V9Z"/></svg></span>
-      Modes
-    </a></li>
-    <li><a href="#benchmark">
-      <span class="icon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M22,21H2V3H4V19H6V10H10V19H12V6H16V19H18V14H22V21Z"/></svg></span>
-      Benchmark
-    </a></li>
-    <li><a href="#quickstart">
-      <span class="icon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M8,5.14V19.14L19,12.14L8,5.14Z"/></svg></span>
-      Quick Start
-    </a></li>
-    <li><a href="#stack">
-      <span class="icon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M12,16L19.36,10.27L21,9L12,3L3,9L4.63,10.27M12,18.54L4.62,12.81L3,14.07L12,20L21,14.07L19.37,12.8L12,18.54Z"/></svg></span>
-      Stack
-    </a></li>
+    <li><a href="#hero"><span class="icon">
+
+<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M10,20V14H14V20H19V12H22L12,3L2,12H5V20H10Z"/></svg>
+
+</span> Home</a></li>
+    
+    <li><a href="#features"><span class="icon">
+
+<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M3,3H11V11H3V3M3,13H11V21H3V13M13,3H21V11H13V3M13,13H21V21H13V13Z"/></svg>
+
+</span> Features</a></li>
+    
+    <li><a href="#models"><span class="icon">
+
+<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M17,7A2,2 0 0,1 19,9V17A2,2 0 0,1 17,19H7A2,2 0 0,1 5,17V9A2,2 0 0,1 7,7H17M7,9V17H17V9H7M12,2A2,2 0 0,1 14,4V6H15V4A3,3 0 0,0 12,1A3,3 0 0,0 9,4V6H10V4A2,2 0 0,1 12,2Z"/></svg>
+
+</span> Supported Models</a></li>
+    
+    <li><a href="#modes"><span class="icon">
+
+<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M3,17V19H9V17H3M3,5V7H13V5H3M13,21V19H21V17H13V15H11V21H13M7,9V11H3V13H7V15H9V9H7M21,13V11H11V13H21M15,9H17V7H21V5H17V3H15V9Z"/></svg>
+
+</span> Training Modes</a></li>
+    
+    <li><a href="#benchmark"><span class="icon">
+
+<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M12,16L19.36,10.27L21,9L12,3L3,9L4.63,10.27M12,18.54L4.62,12.81L3,14.07L12,20L21,14.07L19.37,12.8L12,18.54Z"/></svg>
+
+</span> Benchmark Stats</a></li>
+    
+    <li><a href="#quickstart"><span class="icon">
+
+<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M8,5.14V19.14L19,12.14L8,5.14Z"/></svg>
+
+</span> Quick Start</a></li>
+    
+    <li><a href="#stack"><span class="icon">
+
+<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M12,16L19.36,10.27L21,9L12,3L3,9L4.63,10.27M12,18.54L4.62,12.81L3,14.07L12,20L21,14.07L19.37,12.8L12,18.54Z"/></svg>
+
+</span> Tech Stack</a></li>
+    
   </ul>
   <hr class="sidebar-divider">
   <div class="sidebar-footer">
@@ -467,85 +506,121 @@
       <p class="subtitle">End-to-end pipeline for cybersecurity CTF and competitive programming using Unsloth + QLoRA on Google Colab's free T4 GPU.</p>
       <div class="cta">
         <a href="https://github.com/yuzu-octopus/CTF-LLM" class="btn btn-primary">View on GitHub</a>
+        
         <a href="#quickstart" class="btn btn-outline">Quick Start</a>
+        
       </div>
     </div>
   </section>
 
+  
   <section id="features">
     <div class="container">
       <h2>Features</h2>
+
+      
       <div class="grid">
+        
         <div class="card">
           <h3>End-to-end Pipeline</h3>
           <p>Scrapes CTF writeups from 13 GitHub repos, downloads curated HuggingFace datasets, processes to ChatML, trains with Unsloth QLoRA, evaluates on a 210-question benchmark.</p>
         </div>
+        
         <div class="card">
           <h3>4 Models Supported</h3>
           <p>Gemma 4 E4B, Gemma 4 12B, Qwen 3.5 9B, Qwen 3.5 4B — all running 4-bit QLoRA on a free T4 GPU (16GB VRAM).</p>
         </div>
+        
         <div class="card">
           <h3>210-Question Benchmark</h3>
           <p>Curated evaluation set across 4 categories (pwn, rev, crypto, web) and 3 difficulty levels with Wilson 95% CI and McNemar's test.</p>
         </div>
+        
         <div class="card">
           <h3>Colab-Ready</h3>
-          <p>Single <code>finetune.sh</code> handles session creation, dependency install, file upload, training, and model download.</p>
+          <p>Single finetune.sh handles session creation, dependency install, file upload, training, and model download.</p>
         </div>
+        
       </div>
+
+      
     </div>
   </section>
-
+  
   <section id="models">
     <div class="container">
       <h2>Supported Models</h2>
+
+      
       <table>
         <thead>
           <tr><th>Model</th><th>Parameters</th><th>Fast Mode (LoRA r)</th><th>Quality Mode (LoRA r)</th><th>VRAM (T4)</th><th>Status</th></tr>
         </thead>
         <tbody>
-          <tr><td>Gemma 4 E4B</td><td>~4.5B</td><td>8</td><td>32</td><td>~10GB</td><td class="status-comfortable">Comfortable</td></tr>
-          <tr><td>Gemma 4 12B</td><td>~12B</td><td>8</td><td>32</td><td>~11GB</td><td class="status-tight">Tight</td></tr>
-          <tr><td>Qwen 3.5 9B</td><td>~9B</td><td>8</td><td>32</td><td>~12GB</td><td class="status-comfortable">Comfortable</td></tr>
-          <tr><td>Qwen 3.5 4B</td><td>~4B</td><td>8</td><td>16</td><td>~8GB</td><td class="status-comfortable">Comfortable</td></tr>
+          
+          <tr><td>Gemma 4 E4B</td><td>~4.5B</td><td>8</td><td>32</td><td>~10GB</td><td>Comfortable</td></tr>
+          
+          <tr><td>Gemma 4 12B</td><td>~12B</td><td>8</td><td>32</td><td>~11GB</td><td>Tight</td></tr>
+          
+          <tr><td>Qwen 3.5 9B</td><td>~9B</td><td>8</td><td>32</td><td>~12GB</td><td>Comfortable</td></tr>
+          
+          <tr><td>Qwen 3.5 4B</td><td>~4B</td><td>8</td><td>16</td><td>~8GB</td><td>Comfortable</td></tr>
+          
         </tbody>
       </table>
+
+      
     </div>
   </section>
-
+  
   <section id="modes">
     <div class="container">
       <h2>Training Modes</h2>
+
+      
       <table>
         <thead>
           <tr><th>Parameter</th><th>Fast (~30 min)</th><th>Quality (~50-70 min)</th></tr>
         </thead>
         <tbody>
+          
           <tr><td>Dataset</td><td>~500 examples</td><td>2500+ examples</td></tr>
+          
           <tr><td>LoRA rank</td><td>8</td><td>32</td></tr>
+          
           <tr><td>Max seq length</td><td>2048</td><td>4096</td></tr>
+          
           <tr><td>Epochs</td><td>1</td><td>2</td></tr>
+          
         </tbody>
       </table>
+
+      
     </div>
   </section>
-
+  
   <section id="benchmark">
     <div class="container">
       <h2>Benchmark Stats</h2>
+
+      
       <p style="margin-bottom: 20px;"><strong style="color: var(--purple);">210 questions</strong> across 4 categories and 3 difficulty levels.</p>
-      <ul class="stats">
-        <li><strong>Categories</strong> &mdash; pwn (57), rev (50), crypto (50), web (53)</li>
-        <li><strong>Difficulties</strong> &mdash; easy (72), medium (79), hard (59)</li>
-        <li><strong>Task types</strong> &mdash; flag_extraction, multiple_choice, code_generation, vulnerability_identification, patch_generation, exploit_trace</li>
-        <li><strong>Statistical rigor</strong> &mdash; Wilson 95% CI, McNemar's test, contamination check, cheating detection</li>
-      </ul>
+<ul class="stats">
+  <li><strong>Categories</strong> &mdash; pwn (57), rev (50), crypto (50), web (53)</li>
+  <li><strong>Difficulties</strong> &mdash; easy (72), medium (79), hard (59)</li>
+  <li><strong>Task types</strong> &mdash; flag_extraction, multiple_choice, code_generation, vulnerability_identification, patch_generation, exploit_trace</li>
+  <li><strong>Statistical rigor</strong> &mdash; Wilson 95% CI, McNemar's test, contamination check, cheating detection</li>
+</ul>
+
+      
     </div>
   </section>
-
+  
   <section id="quickstart">
     <div class="container">
       <h2>Quick Start</h2>
+
+      
       <pre><code># 1. Install dependencies
 uv sync
 
@@ -554,21 +629,34 @@ uv sync
 
 # 3. Evaluate
 ./finetune.sh gemma4 --eval</code></pre>
+
+      
     </div>
   </section>
-
+  
   <section id="stack">
     <div class="container">
       <h2>Tech Stack</h2>
+
+      
       <div class="stack">
+        
         <span class="badge"><strong>Unsloth</strong> &mdash; QLoRA fine-tuning</span>
+        
         <span class="badge"><strong>PyTorch</strong> &mdash; deep learning</span>
+        
         <span class="badge"><strong>HuggingFace</strong> &mdash; datasets + models</span>
+        
         <span class="badge"><strong>Google Colab</strong> &mdash; free T4 GPU</span>
+        
         <span class="badge"><strong>uv</strong> &mdash; Python package manager</span>
+        
       </div>
+
+      
     </div>
   </section>
+  
 
 </main>
 
