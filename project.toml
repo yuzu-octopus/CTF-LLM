@@ -1,0 +1,144 @@
+[project]
+name = "CTF-LLM"
+tagline = "Fine-tune LLMs to solve CTF challenges"
+subtitle = "End-to-end pipeline for fine-tuning open-source LLMs (Gemma 4, Qwen 3.5) on cybersecurity CTF challenges using Unsloth + QLoRA on Google Colab's free T4 GPU."
+description = "End-to-end pipeline for fine-tuning open-source LLMs on CTF challenges and competitive programming using Unsloth + QLoRA on Google Colab T4."
+github_url = "https://github.com/yuzu-octopus/CTF-LLM"
+page_url = "https://yuzu-octopus.github.io/CTF-LLM/"
+quickstart_url = "#quickstart"
+logo_svg = """
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <rect width="64" height="64" rx="12" fill="#44475a"/>
+  <path d="M18 12h28l-6 20 6 20H18l6-20-6-20z" fill="#bd93f9"/>
+  <path d="M22 16h20l-4 16 4 16H22l4-16-4-16z" fill="#50fa7b" opacity="0.8"/>
+</svg>"""
+favicon_data = """
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="10" fill="#282a36"/>
+  <path d="M16 10h32l-8 12 8 12H16z" fill="#bd93f9"/>
+  <path d="M16 34h32l-8 12 8 12H16z" fill="#50fa7b" opacity="0.8"/>
+</svg>"""
+
+[brand]
+tagline = "fine-tune · CTF · qLoRA"
+
+[[sections]]
+id = "features"
+type = "features"
+title = "Features"
+icon = "grid"
+
+[[sections.items]]
+title = "End-to-end Pipeline"
+body = "Scrapes CTF writeups from 13 GitHub repos, downloads curated HuggingFace datasets, processes to ChatML, trains with Unsloth QLoRA, evaluates on a 210-question benchmark."
+
+[[sections.items]]
+title = "4 Models Supported"
+body = "Gemma 4 E4B, Gemma 4 12B, Qwen 3.5 9B, Qwen 3.5 4B — all running 4-bit QLoRA on a free T4 GPU (16GB VRAM)."
+
+[[sections.items]]
+title = "210-Question Benchmark"
+body = "Curated evaluation set across 4 categories (pwn, rev, crypto, web) and 3 difficulty levels with Wilson 95% CI, McNemar's paired test, and contamination checking."
+
+[[sections.items]]
+title = "Colab-Ready"
+body = "Single finetune.sh handles session creation, dependency install, file upload, training, and model download — zero manual Colab UI interaction."
+
+[[sections]]
+id = "models"
+type = "table"
+title = "Supported Models"
+icon = "chip"
+headers = ["Model", "Params", "Fast r", "Quality r", "VRAM", "Status"]
+
+[[sections.rows]]
+cells = ["Gemma 4 E4B", "~4.5B", "8", "32", "~10GB", "Comfortable"]
+
+[[sections.rows]]
+cells = ["Gemma 4 12B", "~12B", "8", "32", "~11GB", "Tight"]
+
+[[sections.rows]]
+cells = ["Qwen 3.5 9B", "~9B", "8", "32", "~12GB", "Comfortable"]
+
+[[sections.rows]]
+cells = ["Qwen 3.5 4B", "~4B", "8", "16", "~8GB", "Comfortable"]
+
+[[sections]]
+id = "modes"
+type = "table"
+title = "Training Modes"
+icon = "layers"
+headers = ["Parameter", "Fast (~30 min)", "Quality (~50-70 min)"]
+
+[[sections.rows]]
+cells = ["Dataset", "~500 examples", "2500+ examples"]
+
+[[sections.rows]]
+cells = ["LoRA rank", "8", "32"]
+
+[[sections.rows]]
+cells = ["Max seq length", "2048", "4096"]
+
+[[sections.rows]]
+cells = ["Epochs", "1", "2"]
+
+[[sections]]
+id = "benchmark"
+type = "text"
+title = "Benchmark"
+icon = "document"
+body = """
+<p><strong style="color:var(--purple);">210 questions</strong> across 4 categories and 3 difficulty levels.</p>
+<ul class="stats" style="list-style:none;padding:0;">
+  <li style="padding:8px 0;border-bottom:1px solid var(--muted);"><strong style="color:var(--purple);">Categories</strong> &mdash; pwn (57), rev (50), crypto (50), web (53)</li>
+  <li style="padding:8px 0;border-bottom:1px solid var(--muted);"><strong style="color:var(--purple);">Difficulties</strong> &mdash; easy (72), medium (79), hard (59)</li>
+  <li style="padding:8px 0;border-bottom:1px solid var(--muted);"><strong style="color:var(--purple);">Task types</strong> &mdash; flag_extraction, multiple_choice, code_generation, vulnerability_identification, patch_generation, exploit_trace</li>
+  <li style="padding:8px 0;"><strong style="color:var(--purple);">Statistical rigor</strong> &mdash; Wilson 95% CI (±6.8%), McNemar's test, contamination check, cheating detection</li>
+</ul>
+"""
+
+[[sections]]
+id = "quickstart"
+type = "code_block"
+title = "Quick Start"
+icon = "play"
+code = """
+# Install dependencies
+uv sync
+
+# Run full pipeline (build data + train)
+./finetune.sh gemma4 --all
+
+# Evaluate trained model
+./finetune.sh gemma4 --eval
+"""
+
+[[sections]]
+id = "stack"
+type = "stack"
+title = "Tech Stack"
+icon = "layers"
+
+[[sections.items]]
+name = "Unsloth"
+description = "QLoRA fine-tuning framework"
+
+[[sections.items]]
+name = "PyTorch"
+description = "deep learning framework"
+
+[[sections.items]]
+name = "HuggingFace"
+description = "datasets + model hub"
+
+[[sections.items]]
+name = "Google Colab"
+description = "free T4 GPU (16GB)"
+
+[[sections.items]]
+name = "uv"
+description = "Python package manager"
+
+[[sections.items]]
+name = "GitHub Actions"
+description = "CI pipeline"
