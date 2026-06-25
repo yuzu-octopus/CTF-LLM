@@ -51,9 +51,3 @@ target-version = "py311"
 select = ["E", "F", "W", "I", "N", "UP", "S"]
 ignore = ["S101"]
 
-[dependency-groups]
-dev = [
-    "pytest>=9.1.0",
-    "ruff>=0.2.0",
-    "pyright>=1.1.300",
-]

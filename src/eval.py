@@ -44,15 +44,45 @@ def wilson_ci(count: int, n: int, z: float = 1.96) -> tuple[float, float]:
 
 def load_model(model_key: str, adapter_path: str):
     """Load model with LoRA adapter for inference."""
-    from src.model_utils import load_model_for_inference
-    return load_model_for_inference(model_key, adapter_path)
+    return _load_model_for_inference(model_key, adapter_path)
 
 
 def _model_name(model_key: str) -> str:
     """Map model key to HuggingFace model name."""
-    from src.model_utils import _model_name as _mn
-    return _mn(model_key)
+    from src.train import load_config
+    config = load_config(model_key)
+    return config.get("model", config).get("name", model_key)
 
+
+
+def _load_model_for_inference(model_key: str, adapter_path: str = None):
+    """Load model for inference with optional LoRA adapter."""
+    from unsloth import FastLanguageModel, FastVisionModel, get_chat_template
+
+    model_name = _model_name(model_key)
+
+    if model_key.startswith("gemma"):
+        from unsloth import FastVisionModel as FVM
+        model, processor = FVM.from_pretrained(
+            model_name=model_name, load_in_4bit=True,
+        )
+        processor = get_chat_template(processor, "gemma-4")
+        tokenizer = processor.tokenizer
+        model = FVM.get_for_inference(model)
+    else:
+        from unsloth import FastLanguageModel as FLM
+        model, tokenizer = FLM.from_pretrained(
+            model_name=model_name, load_in_4bit=True, dtype=None,
+        )
+        tokenizer = get_chat_template(tokenizer, "chatml")
+        model = FLM.get_for_inference(model)
+
+    if adapter_path and Path(adapter_path).exists():
+        from peft import PeftModel
+        model = PeftModel.from_pretrained(model, adapter_path)
+        print(f"  Loaded LoRA adapter from {adapter_path}")
+
+    return model, tokenizer
 
 def generate_response(model, tokenizer, system_prompt: str, user_prompt: str,
                       max_new_tokens: int = 512, n_samples: int = 1) -> list[str]:
