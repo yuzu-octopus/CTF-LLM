@@ -17,18 +17,8 @@ import tempfile
 import requests
 from git import Repo
 
-try:
-    from datasets import load_dataset
-    HAS_DATASETS = True
-except ImportError:
-    HAS_DATASETS = False
-    print("Warning: 'datasets' library not installed. HuggingFace datasets will be skipped.")
-
-try:
-    from tqdm import tqdm
-    HAS_TQDM = True
-except ImportError:
-    HAS_TQDM = False
+from datasets import load_dataset
+from tqdm import tqdm
 
 # Generous safety cap for extraction length
 MAX_OUTPUT_LEN = 20000
@@ -208,8 +198,7 @@ def extract_writeups_from_repo(repo_path: str, category: str, repo_name: str) ->
     start_time = time.time()
     
     file_iter = enumerate(md_files)
-    if HAS_TQDM:
-        file_iter = tqdm(enumerate(md_files), total=total_files, desc=f"    {repo_name}", unit="file")
+    file_iter = tqdm(enumerate(md_files), total=total_files, desc=f"    {repo_name}", unit="file")
     
     for idx, md_file in file_iter:
         try:
@@ -269,8 +258,7 @@ def extract_writeups_from_repo(repo_path: str, category: str, repo_name: str) ->
                 })
                 extracted += 1
             
-            if not HAS_TQDM and ((idx + 1) % 10 == 0 or idx + 1 == total_files):
-                print(f"    [{idx + 1}/{total_files}] files processed, {extracted} extracted so far", flush=True)
+
 
         except Exception:
             continue

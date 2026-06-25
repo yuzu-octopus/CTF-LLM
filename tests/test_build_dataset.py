@@ -3,7 +3,9 @@ import pytest
 from src.build_dataset import (
     find_solution_boundary,
     extract_code_blocks,
+    extract_solution_text,
     dedup_examples,
+    CTF_WRITEUP_REPOS,
 )
 
 
@@ -16,7 +18,6 @@ class TestFindSolutionBoundary:
     def test_no_solution_header(self):
         content = "# Challenge\nJust description"
         line = find_solution_boundary(content)
-        # Returns line number or -1 depending on implementation
         assert isinstance(line, int)
 
 
@@ -49,3 +50,24 @@ class TestDedupExamples:
         ]
         result = dedup_examples(examples)
         assert len(result) == 2
+
+
+class TestExtractSolutionText:
+    def test_basic_extraction(self):
+        content = "# Challenge\nDesc\n## Solution\nflag{test}\n## Notes\nmore"
+        result = extract_solution_text(content)
+        assert "flag{test}" in result
+
+    def test_no_solution(self):
+        content = "# Just a description"
+        result = extract_solution_text(content)
+        assert result is None or result == ""
+
+
+class TestCtfWriteupRepos:
+    def test_repos_listed(self):
+        assert len(CTF_WRITEUP_REPOS) > 10
+
+    def test_repo_structure(self):
+        for repo in CTF_WRITEUP_REPOS:
+            assert "url" in repo or "repo" in repo
