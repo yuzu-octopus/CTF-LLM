@@ -15,7 +15,7 @@
   <meta name="twitter:title" content="CTF-LLM | Fine-tune LLMs to solve CTF challenges">
   <meta name="twitter:description" content="End-to-end pipeline for fine-tuning open-source LLMs on CTF challenges and competitive programming using Unsloth + QLoRA on Google Colab T4.">
   
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2210%22%20fill%3D%22%23282a36%22/%3E%0A%20%20%3Cpath%20d%3D%22M20%2020%20L36%2032%20L20%2044%22%20fill%3D%22none%22%20stroke%3D%22%23bd93f9%22%20stroke-width%3D%223.5%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22/%3E%0A%20%20%3Ccircle%20cx%3D%2244%22%20cy%3D%2232%22%20r%3D%224%22%20fill%3D%22%2350fa7b%22/%3E%0A%3C/svg%3E">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2210%22%20fill%3D%22%23282a36%22/%3E%0A%20%20%3Cpath%20d%3D%22M22%2024%20L28%2032%20L22%2040%22%20fill%3D%22none%22%20stroke%3D%22%236272a4%22%20stroke-width%3D%222.5%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22/%3E%0A%20%20%3Cpolygon%20points%3D%2248%2C26%2050%2C29%2052%2C30%2050%2C31%2048%2C34%2046%2C31%2044%2C30%2046%2C29%22%20fill%3D%22%23bd93f9%22/%3E%0A%20%20%3Cpolygon%20points%3D%2238%2C20%2039%2C22%2041%2C23%2039%2C24%2038%2C26%2037%2C24%2035%2C23%2037%2C22%22%20fill%3D%22%2350fa7b%22/%3E%0A%20%20%3Cpolygon%20points%3D%2254%2C20%2055%2C21%2056%2C22%2055%2C23%2054%2C24%2053%2C23%2052%2C22%2053%2C21%22%20fill%3D%22%23ff79c6%22/%3E%0A%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -471,8 +471,10 @@
   <div class="sidebar-brand">
     <div class="logo"><svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
   <rect width="64" height="64" rx="14" fill="#44475a"/>
-  <path d="M18 16 L34 32 L18 48" fill="none" stroke="#bd93f9" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
-  <polygon points="44,24 46,30 52,32 46,34 44,40 42,34 36,32 42,30" fill="#50fa7b"/>
+  <path d="M20 24 L28 32 L20 40" fill="none" stroke="#6272a4" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <polygon points="48,22 50,26 54,28 50,30 48,34 46,30 42,28 46,26" fill="#bd93f9"/>
+  <polygon points="34,14 36,17 38,18 36,19 34,22 32,19 30,18 32,17" fill="#50fa7b"/>
+  <polygon points="54,15 55,17 57,18 55,19 54,21 53,19 51,18 53,17" fill="#ff79c6"/>
 </svg></div>
     <div class="name">CTF-LLM</div>
     <div class="tagline">fine-tune · CTF · qLoRA</div>
@@ -626,7 +628,7 @@
       <div style="overflow-x: auto;">
       <table>
         <thead>
-          <tr><th>Parameter</th><th>Fast (~30 min)</th><th>Quality (~50-70 min)</th></tr>
+          <tr><th>Parameter</th><th>Fast (~30 min)</th><th>Quality (~70-100 min)</th></tr>
         </thead>
         <tbody>
           
@@ -636,7 +638,7 @@
           
           <tr><td>Max seq length</td><td>2048</td><td>4096</td></tr>
           
-          <tr><td>Epochs</td><td>1</td><td>2</td></tr>
+          <tr><td>Epochs</td><td>1</td><td>3</td></tr>
           
         </tbody>
       </table>
