@@ -13,10 +13,10 @@ logo_svg = """
   <path d="M26 34 L30 26 L34 38 L38 30" fill="none" stroke="#50fa7b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>"""
 favicon_data = """
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="10" fill="#282a36"/>
-  <path d="M32 10 L46 18 L46 34 C46 44 32 54 32 54 C32 54 18 44 18 34 L18 18 Z" fill="#bd93f9" opacity="0.9"/>
-  <path d="M28 32 L32 26 L36 36 L40 28" fill="none" stroke="#282a36" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="5" fill="#282a36"/>
+  <path d="M16 5 L23 9 L23 17 C23 22 16 27 16 27 C16 27 9 22 9 17 L9 9 Z" fill="#bd93f9" opacity="0.9"/>
+  <path d="M14 16 L16 13 L18 18 L20 14" fill="none" stroke="#282a36" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>"""
 
 [brand]
@@ -62,6 +62,9 @@ cells = ["Qwen 3.5 9B", "~9B", "8", "32", "~12GB", "Comfortable"]
 
 [[sections.rows]]
 cells = ["Qwen 3.5 4B", "~4B", "8", "16", "~8GB", "Comfortable"]
+
+[[sections.rows]]
+cells = ["Ornith 1.0 9B", "~9B", "8", "32", "~7GB", "Comfortable"]
 
 [[sections]]
 id = "modes"

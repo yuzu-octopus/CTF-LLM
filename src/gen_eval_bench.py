@@ -686,10 +686,22 @@ PATCH_GEN = [
 EXPLOIT_TRACE = [
     {"id": "trace-001", "difficulty": "medium", "task_type": "exploit_trace", "category": "pwn",
      "prompt": "This exploit redirects to win(). Walk through the steps:\n```python\nfrom pwn import *\np = process('./vuln')\npayload = b'A'*32 + p32(0x08049196)\np.sendline(payload)\n```\nExplain each step.",
-     "required_steps": ["buffer overflow", "32", "win"]},
+     "required_steps": ["buffer overflow", "32", "win"],
+     "subtasks": [
+         {"name": "identify_overflow", "criterion": r"buffer overflow|stack overflow|overwrit", "weight": 0.3},
+         {"name": "identify_offset", "criterion": r"32 byte|offset.*32|32.*offset", "weight": 0.2},
+         {"name": "identify_win", "criterion": r"win\(\)|win function|redirect|return address", "weight": 0.3},
+         {"name": "explain_pwn", "criterion": r"pwn|pwntools|process", "weight": 0.2},
+     ]},
     {"id": "trace-002", "difficulty": "hard", "task_type": "exploit_trace", "category": "pwn",
      "prompt": "This ROP chain exploits a canary-protected binary. Explain:\n```python\npayload = b'A'*64 + canary + b'B'*8 + rop_chain\n```\nWhat's happening?",
-     "required_steps": ["canary", "overflow", "rop"]},
+     "required_steps": ["canary", "overflow", "rop"],
+     "subtasks": [
+         {"name": "identify_canary", "criterion": r"canary|stack canary|canary leak", "weight": 0.3},
+         {"name": "identify_overflow", "criterion": r"buffer overflow|stack overflow|64 bytes", "weight": 0.2},
+         {"name": "identify_rop", "criterion": r"rop|return.oriented|gadget", "weight": 0.3},
+         {"name": "explain_bypass", "criterion": r"bypass|preserv|keep.*canary", "weight": 0.2},
+     ]},
 ]
 
 

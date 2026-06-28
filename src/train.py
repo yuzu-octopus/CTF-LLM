@@ -181,7 +181,7 @@ def train(model_key: str, data_file: str, output_dir: str, epochs: int = 3, lora
             gradient_accumulation_steps=training_config.get("gradient_accumulation_steps", 4),
             warmup_ratio=training_config.get("warmup_ratio", 0.05),
             num_train_epochs=epochs,
-            learning_rate=float(training_config.get("learning_rate", 1e-4)),
+            learning_rate=float(training_config.get("learning_rate", 2e-4)),
             logging_steps=1,
             output_dir=output_dir,
             optim=training_config.get("optim", "adamw_8bit"),
@@ -333,7 +333,7 @@ def _build_curated_subset(output_path: str):
 
 def main():
     parser = argparse.ArgumentParser(description="Unified CTF/Coding model fine-tuning")
-    parser.add_argument("--model", choices=["gemma4", "gemma4-12b", "qwen35", "qwen35-4b"], required=True,
+    parser.add_argument("--model", choices=["gemma4", "gemma4-12b", "qwen35", "qwen35-4b", "ornith10"], required=True,
                        help="Model to fine-tune")
     parser.add_argument("--data", default="data/merged/train.jsonl",
                        help="Training data file (JSONL)")

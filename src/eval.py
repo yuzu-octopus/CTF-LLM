@@ -42,10 +42,6 @@ def wilson_ci(count: int, n: int, z: float = 1.96) -> tuple[float, float]:
     return (max(0.0, center - spread), min(1.0, center + spread))
 
 
-def load_model(model_key: str, adapter_path: str):
-    """Load model with LoRA adapter for inference."""
-    return _load_model_for_inference(model_key, adapter_path)
-
 
 def _model_name(model_key: str) -> str:
     """Map model key to HuggingFace model name."""
@@ -55,7 +51,7 @@ def _model_name(model_key: str) -> str:
 
 
 
-def _load_model_for_inference(model_key: str, adapter_path: str = None):
+def load_model(model_key: str, adapter_path: str = None):
     """Load model for inference with optional LoRA adapter."""
     from unsloth import FastLanguageModel, FastVisionModel, get_chat_template
 
@@ -200,9 +196,6 @@ def grade_patch(response: str, banned: list = None, required: list = None) -> tu
     return True, "Patch passes token checks"
 
 
-def grade_vuln_id(response: str, expected: str) -> tuple[bool, str]:
-    """Grade vulnerability identification — reuse grade_mcq logic."""
-    return grade_mcq(response, expected)
 
 
 def grade_exploit_trace(response: str, required_steps: list = None) -> tuple[bool, str]:
@@ -228,7 +221,7 @@ def grade(challenge: dict, response: str) -> tuple[bool, str]:
     elif task_type == "code_generation":
         return grade_code(response, challenge.get("reference"), challenge.get("test_cases"))
     elif task_type == "vulnerability_identification":
-        return grade_vuln_id(response, expected)
+        return grade_mcq(response, expected)
     elif task_type == "patch_generation":
         return grade_patch(response, challenge.get("banned_tokens"), challenge.get("required_tokens"))
     elif task_type == "exploit_trace":
@@ -430,23 +423,6 @@ def print_results(eval_result: dict):
         mark = "✓" if r["correct"] else "✗"
         score = r.get("score", float(r["correct"]))
         print(f"  {mark} {r['id']:<12} ({r['difficulty']:<6}) score={score:.2f} {r.get('feedback', '')[:50]}")
-
-    # Length-bias probe
-    correct_lens = [len(r["response"]) for r in results if r["correct"]]
-    wrong_lens = [len(r["response"]) for r in results if not r["correct"]]
-    if correct_lens and wrong_lens:
-        mean_c = sum(correct_lens) / len(correct_lens)
-        mean_w = sum(wrong_lens) / len(wrong_lens)
-        ratio = mean_c / mean_w if mean_w > 0 else float('inf')
-        flag = " ⚠ length bias suspected" if ratio > 1.5 or ratio < 0.67 else " ✓ no obvious length bias"
-        print(f"\nLength-bias probe:")
-        print(f"  avg correct: {mean_c:.0f} chars | avg wrong: {mean_w:.0f} chars | ratio: {ratio:.2f}{flag}")
-
-    # Cheating detection
-    cheated = sum(1 for r in results if r.get("suspicious_memorization"))
-    if cheated:
-        print(f"  Suspicious memorization: {cheated}/{len(results)} ({cheated/len(results)*100:.0f}%)")
-
     # Difficulty-balanced accuracy
     all_buckets = [(r["category"], r["difficulty"]) for r in results]
     unique_buckets = list(set(all_buckets))
@@ -597,7 +573,7 @@ def save_results(eval_results: list[dict], output_dir: str):
 
 def main():
     parser = argparse.ArgumentParser(description="CTF Model Evaluator")
-    parser.add_argument("--model", choices=["gemma4", "gemma4-12b", "qwen35", "qwen35-4b"],
+    parser.add_argument("--model", choices=["gemma4", "gemma4-12b", "qwen35", "qwen35-4b", "ornith10"],
                         help="Model to evaluate")
     parser.add_argument("--adapter", help="Path to LoRA adapter directory")
     parser.add_argument("--bench", help="Path to benchmark JSONL (default: data/eval/ctf_bench.jsonl)")
