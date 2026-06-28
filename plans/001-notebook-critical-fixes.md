@@ -17,7 +17,7 @@ The notebook has 6 bugs that prevent it from running correctly:
 
 ## Current State
 
-**File**: `notebooks/qwen4b_self_contained.ipynb`
+**File**: `notebooks/self_contained.ipynb`
 
 Cell 19 (Section 6.3) has:
 ```python
@@ -133,12 +133,12 @@ For N4, the generator's cell-19 builder (line 158) is a pass-through, so fixing 
 
 ```bash
 # Verify notebook is valid JSON
-python3 -c "import json; json.load(open('notebooks/qwen4b_self_contained.ipynb')); print('Valid JSON')"
+python3 -c "import json; json.load(open('notebooks/self_contained.ipynb')); print('Valid JSON')"
 
 # Verify hf_examples/doc_examples are defined before use
 python3 -c "
 import json
-nb = json.load(open('notebooks/qwen4b_self_contained.ipynb'))
+nb = json.load(open('notebooks/self_contained.ipynb'))
 cell19 = ''.join(nb['cells'][19]['source'])
 assert 'hf_examples = []' in cell19 or 'hf_examples =' in cell19, 'hf_examples not defined'
 assert 'doc_examples = []' in cell19 or 'doc_examples =' in cell19, 'doc_examples not defined'
@@ -149,7 +149,7 @@ print('Cell 19: hf_examples and doc_examples defined')
 # Verify no hardcoded /content in cell 19
 python3 -c "
 import json
-nb = json.load(open('notebooks/qwen4b_self_contained.ipynb'))
+nb = json.load(open('notebooks/self_contained.ipynb'))
 cell19 = ''.join(nb['cells'][19]['source'])
 assert '/content' not in cell19, 'Still has /content hardcoded'
 print('Cell 19: no hardcoded /content')
@@ -158,7 +158,7 @@ print('Cell 19: no hardcoded /content')
 # Verify Gemma path has use_rslora
 python3 -c "
 import json
-nb = json.load(open('notebooks/qwen4b_self_contained.ipynb'))
+nb = json.load(open('notebooks/self_contained.ipynb'))
 cell21 = ''.join(nb['cells'][21]['source'])
 assert 'use_rslora=USE_RSLORA' in cell21, 'use_rslora missing'
 assert 'max_seq_length=MAX_SEQ_LENGTH' in cell21, 'max_seq_length missing'
@@ -168,5 +168,5 @@ print('Cell 21: use_rslora and max_seq_length present')
 
 ## Files to Modify
 
-- `notebooks/qwen4b_self_contained.ipynb` (cells 19, 21, 25)
+- `notebooks/self_contained.ipynb` (cells 19, 21, 25)
 - `scripts/generate_notebook.py` (verify pass-through picks up fixes)

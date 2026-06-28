@@ -75,7 +75,7 @@ Note: Unsloth says "Reduce to 2e-5 for long training runs" — our ~2500-example
 
 ### Step 5: Increase quality mode epochs to 3
 
-In `notebooks/qwen4b_self_contained.ipynb`, change quality mode epochs:
+In `notebooks/self_contained.ipynb`, change quality mode epochs:
 ```python
 NUM_EPOCHS = 3  # was 2 — LoRA with r=32 needs more steps
 ```
@@ -112,4 +112,4 @@ python3 -c "import py_compile; py_compile.compile('src/train.py', doraise=True);
 - `configs/gemma4-12b.yaml`
 - `configs/qwen35.yaml`
 - `configs/qwen35-4b.yaml`
-- `notebooks/qwen4b_self_contained.ipynb`
+- `notebooks/self_contained.ipynb`

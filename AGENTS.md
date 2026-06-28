@@ -39,7 +39,7 @@ finetuning/
 ├── configs/
 │   ├── gemma4.yaml, gemma4-12b.yaml, qwen35.yaml, qwen35-4b.yaml, ornith10.yaml, ornith10.yaml
 ├── notebooks/
-│   └── qwen4b_self_contained.ipynb   # ONLY notebook — full pipeline
+│   └── self_contained.ipynb   # ONLY notebook — full pipeline
 ├── data/{raw,processed,merged}/       # gitignored
 └── outputs/                            # gitignored
 ```
@@ -87,7 +87,7 @@ grep -c '"output": ""' data/merged/train.jsonl  # should be 0
 - **5 valid `--model` values**: `gemma4`, `gemma4-12b`, `qwen35`, `qwen35-4b`, `ornith10` — exact match only
 - **T4 16GB VRAM ceiling** — `batch_size=1`, `max_seq_length=4096` are mandatory
 - **Use `tqdm.notebook`** in Colab notebooks (not plain `tqdm`)
-- **One notebook only** (`qwen4b_self_contained.ipynb`) — the training-only variant was deleted
+- **One notebook only** (`self_contained.ipynb`) — the training-only variant was deleted
 - **Notebook approach for training**, not `colab exec` — long-running training (model load + 3 epochs) hits Colab session timeout
 - **Distill-first policy** — check existing skills/commands before creating new ones
 - **`eval.py` limitations** — `grade_code` validates syntax + reference tokens (or hidden test cases; not network-bound exploit exec). `grade_mcq` matches `Answer: X` / `(X)` / fallback last letter; lowercases accepted. `grade_flag` uses regex `flag\{[^}]+\}`. Cells < 5 questions are too noisy to report per-bucket; categories < 30 are noisy at the difficulty level. N=210 gives ±6.8% CI (Wilson 95%). `torch` import is guarded with try/except so pure functions import without GPU.

@@ -759,7 +759,7 @@ A user following README alone will hit `KeyError: 'newmodel'` in the notebook at
  1. Create `configs/newmodel.yaml` with model settings
  2. Add the model to `config.yaml` under `models:`
 -3. Run: `./finetune.sh newmodel --all`
-+3. *(Required for the Colab notebook)* Add `(model, mode)` entries to the `MODEL_CONFIGS` dict in `notebooks/qwen4b_self_contained.ipynb`
++3. *(Required for the Colab notebook)* Add `(model, mode)` entries to the `MODEL_CONFIGS` dict in `notebooks/self_contained.ipynb`
 +4. *(Required for `finetune.sh`)* Add `newmodel` to the model list and the config-upload line in `finetune.sh`
 +5. Run: `./finetune.sh newmodel --all`
 ```

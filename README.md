@@ -205,7 +205,7 @@ finetuning/
 │   └── qwen35-4b.yaml       # Qwen 3.5 4B settings
 │
 ├── notebooks/
-│   └── qwen4b_self_contained.ipynb  # ONLY notebook (full pipeline)
+│   └── self_contained.ipynb  # ONLY notebook (full pipeline)
 │
 ├── data/
 │   ├── eval/
@@ -268,8 +268,8 @@ model:
 
 1. Create `configs/newmodel.yaml` with model settings
 2. Add the model to `config.yaml` under `models:`
-3. *(Required for the Colab notebook)* Add `(model, mode)` entries to the `MODEL_CONFIGS` dict in `notebooks/qwen4b_self_contained.ipynb`
-4. *(Required for `finetune.sh`)* Add `newmodel` to the model list and the config-upload line in `finetune.sh`
+3. *(Required for `finetune.sh`)* Add `newmodel` to the model list and the config-upload line in `finetune.sh`
+4. *(Notebook auto-updated)* Run `python3 scripts/generate_notebook.py` to regenerate `notebooks/self_contained.ipynb` with all source files baked in
 5. Run: `./finetune.sh newmodel --all`
 
 ### Current Models
@@ -281,6 +281,19 @@ model:
 | Qwen 3.5 9B | `qwen35` | ~9B | ~6 GB | ✅ Comfortable |
 | Qwen 3.5 4B | `qwen35-4b` | ~4B | ~4 GB | ✅ Comfortable |
 | Ornith 1.0 9B | `ornith10` | ~9B | ~6 GB | ✅ Comfortable |
+
+## Notebook Generation
+
+The Colab notebook at `notebooks/self_contained.ipynb` is **auto-generated** — never edit it directly.
+
+```bash
+# Regenerate the notebook (bakes all src/*.py + configs/*.yaml into it)
+python3 scripts/generate_notebook.py
+```
+
+The generator gzip+base64 encodes every source file into a decode cell. At runtime on Colab, the notebook decodes and writes all files to `/content/`, then imports from `src/` for all logic. This means the notebook contains **zero code duplication** — the source files in `src/` are the single truth.
+
+To add the notebook to a new model, just create `configs/<model>.yaml` and regenerate — the notebook picks it up automatically.
 
 ## Hardware Requirements
 
