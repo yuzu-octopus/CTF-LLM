@@ -8,7 +8,7 @@ identical across models — only the `--model` flag changes.
 
 > **Canonical training interface: the notebook.**
 > Long-running training (model load + 3 epochs) is best run from
-> `notebooks/qwen4b_self_contained.ipynb` opened interactively in Colab. The
+> `notebooks/self_contained.ipynb` opened interactively in Colab. The
 > `colab exec` flow below is fine for short debug runs but will hit Colab's
 > session pruning on a full training job. See the notebook for the production path.
 
@@ -89,7 +89,7 @@ colab exec -s finetune-<model> "pip install -q sentencepiece protobuf datasets h
 
 ### Step 5: Run Training (Notebook — Preferred)
 
-Open `notebooks/qwen4b_self_contained.ipynb` in Colab, set the `--model` cell
+Open `notebooks/self_contained.ipynb` in Colab, set the `--model` cell
 argument to your choice (`gemma4`, `qwen35`, or `qwen35-4b`), and run cells
 top-to-bottom. This keeps the cell visible so you can monitor loss curves and
 catch OOM early.

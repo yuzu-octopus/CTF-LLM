@@ -1,364 +1,400 @@
 #!/usr/bin/env python3
-"""Generate notebooks/qwen4b_self_contained.ipynb from src/*.py functions.
-Run: python3 scripts/generate_notebook.py
+"""Generate notebooks/self_contained.ipynb by base64-baking src/ files.
+
+The notebook decodes src/*.py and configs/*.yaml at runtime, writes them to
+the Colab filesystem, and imports from src/ for all logic — zero code duplication.
+
+Usage: python3 scripts/generate_notebook.py
 """
-import json
-import re
+import json, base64, gzip
 from pathlib import Path
 
-PROJECT = Path(__file__).parent.parent
+PROJECT = Path(__file__).resolve().parent.parent
 SRC = PROJECT / "src"
-NB_PATH = PROJECT / "notebooks" / "qwen4b_self_contained.ipynb"
+CONFIGS = PROJECT / "configs"
+NB_PATH = PROJECT / "notebooks" / "self_contained.ipynb"
 
-SRC_FILES = {
-    "build_dataset": SRC / "build_dataset.py",
-    "download_datasets": SRC / "download_datasets.py",
-    "process_data": SRC / "process_data.py",
-}
 
-src_content = {}
-for name, path in SRC_FILES.items():
-    src_content[name] = path.read_text()
+def b64encode_file(path):
+    return base64.b64encode(gzip.compress(path.read_bytes())).decode()
 
-def extract_function(filepath, func_name):
-    content = src_content[filepath]
-    lines = content.split("\n")
-    func_lines = []
-    in_func = False
-    func_indent = 0
-    for line in lines:
-        if re.match(rf"^def {func_name}\(", line):
-            in_func = True
-            func_indent = len(line) - len(line.lstrip())
-            func_lines.append(line)
-            continue
-        if in_func:
-            if line.strip() == "":
-                func_lines.append(line)
-                continue
-            current_indent = len(line) - len(line.lstrip())
-            if current_indent > func_indent:
-                func_lines.append(line)
-            elif re.match(r"^def |^class ", line):
-                break
-            else:
-                func_lines.append(line)
-    return "\n".join(func_lines).rstrip()
 
-def extract_constants(filepath, names):
-    content = src_content[filepath]
-    lines = content.split("\n")
-    result = []
-    for name in names:
-        for i, line in enumerate(lines):
-            if line.startswith(f"{name} =") or line.startswith(f"{name} = "):
-                if '"""' in line or "\'\'\'" in line:
-                    quote = '"""' if '"""' in line else "\'\'\'"
-                    collected = [line]
-                    for j in range(i+1, len(lines)):
-                        collected.append(lines[j])
-                        if quote in lines[j] and j > i:
-                            break
-                    result.append("\n".join(collected))
-                    break
-                else:
-                    result.append(line)
-                    break
-    return "\n".join(result)
+def code(src):
+    return {"cell_type": "code", "execution_count": None, "metadata": {},
+            "outputs": [], "source": [l + "\n" for l in src]}
 
-def adapt_for_notebook(source):
-    source = source.replace("from tqdm import tqdm", "from tqdm.notebook import tqdm")
-    lines = source.split("\n")
-    adapted = []
-    skip_indent = None
-    for line in lines:
-        if line.strip().startswith("if HAS_TQDM:") or line.strip().startswith("if not HAS_TQDM:"):
-            skip_indent = len(line) - len(line.lstrip())
-            continue
-        if skip_indent is not None:
-            current_indent = len(line) - len(line.lstrip())
-            if line.strip() == "" or current_indent > skip_indent:
-                continue
-            else:
-                skip_indent = None
-        if "HAS_TQDM" in line and "= True" not in line and "= False" not in line:
-            continue
-        adapted.append(line)
-    source = "\n".join(adapted)
-    source = source.replace("[:3000]", "[:MAX_OUTPUT_LEN]")
-    source = source.replace("[:2000]", "[:MAX_OUTPUT_LEN]")
-    source = source.replace("[:1500]", "[:MAX_OUTPUT_LEN]")
-    return source
 
-src_funcs = {
-    "clone_repo": adapt_for_notebook(extract_function("build_dataset", "clone_repo")),
-    "find_solution_boundary": adapt_for_notebook(extract_function("build_dataset", "find_solution_boundary")),
-    "extract_code_blocks": adapt_for_notebook(extract_function("build_dataset", "extract_code_blocks")),
-    "load_hf_with_fallback": adapt_for_notebook(extract_function("download_datasets", "load_hf_with_fallback")),
-    "extract_qa": adapt_for_notebook(extract_function("download_datasets", "extract_qa")),
-    "scrape_doc": adapt_for_notebook(extract_function("build_dataset", "scrape_documentation")),
-    "system_prompts": extract_constants("process_data", ["SYSTEM_PROMPT_CTF", "SYSTEM_PROMPT_CODING"]),
-    "is_ctf_content": adapt_for_notebook(extract_function("process_data", "is_ctf_content")),
-    "ctf_keywords": adapt_for_notebook(extract_constants("process_data", ["CTF_KEYWORDS"])),
-}
+def md(src):
+    return {"cell_type": "markdown", "metadata": {}, "source": [l + "\n" for l in src]}
 
-with open(NB_PATH) as f:
-    current_nb = json.load(f)
 
-def md(src): return {"cell_type": "markdown", "metadata": {}, "source": src}
-def code(src): return {"cell_type": "code", "execution_count": None, "metadata": {}, "outputs": [], "source": src}
-H = current_nb["cells"]
+# Collect all files to bake
+all_files = list(sorted(SRC.glob("*.py"))) + list(sorted(CONFIGS.glob("*.yaml"))) + [PROJECT / "config.yaml"]
+
+encoded = {}
+manifest = []
+for f in all_files:
+    rel = str(f.relative_to(PROJECT))
+    encoded[rel] = b64encode_file(f)
+    manifest.append(f"- `{rel}` ({f.stat().st_size} bytes)")
+
+# Build decode cell
+decode_items = "\n".join(f"    {json.dumps(k)}: {json.dumps(v)}," for k, v in encoded.items())
+decode_source = [
+    "# ============================================================",
+    "# Decode source files to /content/",
+    "# ============================================================",
+    "import base64, gzip, json, os, sys",
+    "",
+    "encoded_files = {",
+    decode_items,
+    "}",
+    "",
+    "for rel_path, encoded in encoded_files.items():",
+    '    dest = f"/content/{rel_path}"',
+    "    os.makedirs(os.path.dirname(dest), exist_ok=True)",
+    "    raw = base64.b64decode(encoded)",
+    "    data = gzip.decompress(raw)",
+    '    with open(dest, "wb") as f:',
+    "        f.write(data)",
+    "    print(f\"  Wrote {rel_path}\")",
+    "",
+    'sys.path.insert(0, "/content")',
+    'print(f"\\nDecoded {len(encoded_files)} files")',
+]
 
 cells = [
-    md(H[0]["source"]), md(H[1]["source"]), code(H[2]["source"]), code(H[3]["source"]),
-    md(H[4]["source"]), code(H[5]["source"]), md(H[6]["source"]), code(H[7]["source"]),
-    # Cell 8: FROM SRC
-    code(["# 3.2 Helper functions (from src/build_dataset.py)\n",
-          src_funcs["clone_repo"] + "\n\n" + src_funcs["find_solution_boundary"] + "\n\n" + src_funcs["extract_code_blocks"] + "\n\nprint(\"Helper functions defined\")"]),
-    code(H[9]["source"]),
-    # Cell 10: Parallel clone + extract
-    code(["# 3.4 Clone all repos in parallel + extract writeups\n",
-          "import concurrent.futures\n",
-          "t0 = time.time()\n",
-          "all_writeups = []\n",
-          "all_clone_results = {}\n",
-          "\n",
-          "def _clone_one(repo):\n",
-          "    p = f\"{tempfile.gettempdir()}/nb_{repo['name']}\"\n",
-          "    return repo, clone_repo(repo[\"url\"], p), p\n",
-          "\n",
-          "with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:\n",
-          "    futures = {pool.submit(_clone_one, r): r for r in CTF_WRITEUP_REPOS}\n",
-          "    for f in concurrent.futures.as_completed(futures):\n",
-          "        repo, ok, path = f.result()\n",
-          "        all_clone_results[repo['name']] = (ok, path)\n",
-          "        print(f\"  {'OK' if ok else 'FAIL'} {repo['name']}\")\n",
-          "\n",
-          "for repo_name, (ok, repo_path) in all_clone_results.items():\n",
-          "    if ok:\n",
-          "        repo_info = next(r for r in CTF_WRITEUP_REPOS if r['name'] == repo_name)\n",
-          "        count = 0\n",
-          "        md_files = [m for m in list(Path(repo_path).rglob(\"*.md\")) + list(Path(repo_path).rglob(\"*.MD\"))\n",
-          "                   if m.name.lower() != \"readme.md\"]\n",
-          "        for md in tqdm(md_files, desc=f\"  {repo_name}\", leave=False):\n",
-          "            ex = extract_writeup(md, repo_info[\"category\"])\n",
-          "            if ex:\n",
-          "                all_writeups.append(ex)\n",
-          "                count += 1\n",
-          "                if count >= repo_info.get(\"max_per_repo\", MAX_PER_REPO):\n",
-          "                    break\n",
-          "\n",
-          "elapsed = time.time() - t0\n",
-          "print(f\"\\nExtracted {len(all_writeups)} writeups in {elapsed:.1f}s\")"]),
-    md(H[11]["source"]), code(H[12]["source"]),
-    # Cell 13: FROM SRC
-    code(["# 4.2 Download and convert HF datasets to Alpaca format\n# (from src/download_datasets.py)\n",
-          src_funcs["load_hf_with_fallback"] + "\n\n" + src_funcs["extract_qa"]]),
-    md(H[14]["source"]), code(H[15]["source"]),
-    # Cell 16: FROM SRC
-    code(["# 5.2 Scrape and parse documentation\n# (from src/build_dataset.py)\n",
-          src_funcs["scrape_doc"]]),
-    md(H[17]["source"]),
-    # Cell 18: FROM SRC
-    code(["# 6.1 System prompts (inlined for self-containment)\n",
-          "SYSTEM_CTF = (\n",
-          "    \"Expert CTF player. Specialties: pwn, rev, web, crypto, forensics. \"\n",
-          "    \"Always reason step-by-step before exploit code.\"\n",
-          ")\n",
-          "\n",
-          "SYSTEM_CODING = (\n",
-          "    \"Expert competitive programmer. Optimize first; explain after. \"\n",
-          "    \"Security-aware coding.\"\n",
-          ")\n",
-          "\n",
-          "CTF_KEYWORDS = [\"pwn\", \"rev\", \"web\", \"crypto\", \"ctf\", \"exploit\", \"vuln\", \"shellcode\"]\n",
-          "\n",
-          "def is_ctf_content(text):\n",
-          "    return any(k in text.lower() for k in CTF_KEYWORDS)\n",
-          "\n",
-          "print(\"System prompts defined\")"]),
-    code(H[19]["source"]), md(H[20]["source"]), code(H[21]["source"]),
-    # Cell 22: Dataset loading + eval split
-    code(["# 7.4 Load dataset and apply chat template\n",
-          "dataset = load_dataset(\"json\", data_files={\"train\": f\"{WORK_DIR}/data/merged/train.jsonl\"}, split=\"train\")\n",
-          "print(f\"Dataset (raw): {len(dataset)} examples\")\n",
-          "\n",
-          "# Drop empty assistant outputs\n",
-          "def has_assistant(ex):\n",
-          "    msgs = ex.get(\"messages\", [])\n",
-          "    if not msgs or not msgs[-1].get(\"content\"):\n",
-          "        return False\n",
-          "    return True\n",
-          "dataset = dataset.filter(has_assistant, desc=\"Filter empty outputs\")\n",
-          "print(f\"Dataset (no empty outputs): {len(dataset)} examples\")\n",
-          "\n",
-          "# Length filter: drop samples longer than max_seq_length tokens (speed win)\n",
-          "# Note: Qwen 3.5 returns a Qwen3VLProcessor (multimodal) that wraps a tokenizer.\n",
-          "# We need the inner tokenizer for encode().\n",
-          "actual_tokenizer = tokenizer.tokenizer if hasattr(tokenizer, 'tokenizer') else tokenizer\n",
-          "print(f\"Tokenizer type: {type(tokenizer).__name__}\")\n",
-          "def length_ok(ex):\n",
-          "    text = actual_tokenizer.apply_chat_template(ex[\"messages\"], tokenize=False)\n",
-          "    tokens = actual_tokenizer.encode(text, add_special_tokens=False)\n",
-          "    return len(tokens) <= MAX_SEQ_LENGTH\n",
-          "\n",
-          "before = len(dataset)\n",
-          "dataset = dataset.filter(length_ok, desc=\"Filter by length\")\n",
-          "after = len(dataset)\n",
-          "if before != after:\n",
-          "    print(f\"Dataset (length-filtered): {after} examples (dropped {before - after} long samples)\")\n",
-          "else:\n",
-          "    print(f\"Dataset (length-filtered): {after} examples (all within {MAX_SEQ_LENGTH} tokens)\")\n",
-          "\n",
-          "sample_msgs = dataset[0][\"messages\"]\n",
-          "print(f\"\\nSample:\\n{sample_msgs[-1]['content'][:300]}...\")\n",
-          "\n",
-          "# Split 10% for eval to detect overfitting\n",
-          "split = dataset.train_test_split(test_size=0.1, seed=42)\n",
-          "train_dataset = split['train']\n",
-          "eval_dataset = split['test']\n",
-          "print(f\"Train: {len(train_dataset)} examples, Eval: {len(eval_dataset)} examples\")"]),
-    md(H[23]["source"]),
-    # Cell 24: SFTTrainer with eval strategy
-    code(["# ============================================================\n",
-          "# 8.1 Create custom training callback with rich visual indicators\n",
-          "# ============================================================\n",
-          "from trl import SFTTrainer, SFTConfig\n",
-          "from transformers import TrainerCallback, TrainingArguments, TrainerState, TrainerControl\n",
-          "\n",
-          "class RichTrainingCallback(TrainerCallback):\n",
-          '    """Custom callback with tqdm progress bar, ETA, GPU memory, and detailed metrics."""\n',
-          "\n",
-          "    def __init__(self):\n",
-          "        self.progress_bar = None\n",
-          "        self.start_time = None\n",
-          "        self.loss_history = []\n",
-          "        self.lr_history = []\n",
-          "\n",
-          "    def on_train_begin(self, args, state, control, **kwargs):\n",
-          "        self.start_time = time.time()\n",
-          "        self.progress_bar = tqdm(\n",
-          "            total=state.max_steps,\n",
-          '            desc="Training",\n',
-          '            unit="step",\n',
-          '            bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]"\n',
-          "        )\n",
-          "        gpu_mem = torch.cuda.memory_allocated() / 1e9 if torch.cuda.is_available() else 0\n",
-          '        print(f"\\n{\'=\'*70}")\n',
-          '        print(f"  TRAINING STARTED")\n',
-          '        print(f"  Total steps: {state.max_steps} | Epochs: {NUM_EPOCHS}")\n',
-          '        print(f"  Effective batch size: {args.per_device_train_batch_size * args.gradient_accumulation_steps}")\n',
-          '        print(f"  Learning rate: {args.learning_rate:.2e}")\n',
-          '        print(f"  VRAM allocated: {gpu_mem:.1f}GB / {torch.cuda.get_device_properties(0).total_memory/1e9:.1f}GB")\n',
-          '        print(f"{\'=\'*70}\\n")\n',
-          "\n",
-          "    def on_log(self, args, state, control, logs=None, **kwargs):\n",
-          "        if logs is None or self.progress_bar is None:\n",
-          "            return\n",
-          '        loss = logs.get("loss", 0)\n',
-          '        lr = logs.get("learning_rate", 0)\n',
-          '        epoch = logs.get("epoch", 0)\n',
-          "\n",
-          "        self.loss_history.append(loss)\n",
-          "        self.lr_history.append(lr)\n",
-          "\n",
-          "        # GPU memory\n",
-          "        gpu_mem = torch.cuda.memory_allocated() / 1e9 if torch.cuda.is_available() else 0\n",
-          "\n",
-          "        # Time estimates\n",
-          "        elapsed = time.time() - self.start_time\n",
-          "        step_time = elapsed / max(state.global_step, 1)\n",
-          "        eta_sec = step_time * (state.max_steps - state.global_step)\n",
-          "\n",
-          "        # Update progress bar postfix\n",
-          '        self.progress_bar.set_postfix_str(\n',
-          '            f"loss={loss:.4f} | lr={lr:.2e} | ep={epoch:.2f} | "\n',
-          '            f"vram={gpu_mem:.1f}GB | {step_time:.1f}s/step | eta={eta_sec/60:.1f}min"\n',
-          "        )\n",
-          "\n",
-          "    def on_train_end(self, args, state, control, **kwargs):\n",
-          "        if self.progress_bar:\n",
-          "            self.progress_bar.close()\n",
-          "        total_time = time.time() - self.start_time\n",
-          "        final_loss = self.loss_history[-1] if self.loss_history else 0\n",
-          '        print(f"\\n{\'=\'*70}")\n',
-          '        print(f"  TRAINING COMPLETE")\n',
-          '        print(f"  Total time: {total_time/60:.1f} minutes ({total_time/3600:.2f} hours)")\n',
-          '        print(f"  Final loss: {final_loss:.4f}")\n',
-          '        print(f"  Loss reduction: {self.loss_history[0]:.4f} -> {final_loss:.4f} "\n',
-          '              f"({(1 - final_loss/self.loss_history[0])*100:.1f}%)" if self.loss_history else "")\n',
-          '        print(f"{\'=\'*70}\\n")\n',
-          "\n",
-          'print("Custom training callback defined")\n',
-          'print(f"  - tqdm progress bar with ETA")\n',
-          'print(f"  - Loss + learning rate per step")\n',
-          'print(f"  - GPU memory monitoring")\n',
-          'print(f"  - Epoch tracking")\n',
-          'print(f"  - Time estimates")\n',
-          "\n",
-          "# ============================================================\n",
-          "# 8.2 Create SFTTrainer with callback\n",
-          "# ============================================================\n",
-          "rich_callback = RichTrainingCallback()\n",
-          "\n",
-          "trainer = SFTTrainer(\n",
-          "    model=model,\n",
-          "    processing_class=tokenizer,\n",
-          "    train_dataset=train_dataset,\n",
-          "    eval_dataset=eval_dataset,\n",
-          "    args=SFTConfig(\n",
-          "        max_seq_length=MAX_SEQ_LENGTH,\n",
-          "        per_device_train_batch_size=BATCH_SIZE,\n",
-          "        gradient_accumulation_steps=GRAD_ACCUM,\n",
-          "        warmup_ratio=WARMUP_RATIO,\n",
-          "        num_train_epochs=NUM_EPOCHS,\n",
-          "        learning_rate=float(LEARNING_RATE),\n",
-          "        weight_decay=WEIGHT_DECAY,\n",
-          "        max_grad_norm=MAX_GRAD_NORM,\n",
-          "        lr_scheduler_type=LR_SCHEDULER,\n",
-          "        logging_steps=10,\n",
-          '        output_dir=f"{WORK_DIR}/outputs",\n',
-          '        optim="adamw_8bit",\n',
-          "        seed=3407,\n",
-          '        save_strategy="steps",\n',
-          "        save_steps=100,\n",
-          "        save_total_limit=2,\n",
-          "        fp16=not torch.cuda.is_bf16_supported(),\n",
-          "        bf16=torch.cuda.is_bf16_supported(),\n",
-          "        assistant_only_loss=True,\n",
-          "        dataset_num_proc=1,\n",
-          '        report_to="none",\n',
-          "        # NO packing — conflicts with assistant_only_loss in trl>=0.12\n",
-          "        neftune_noise_alpha=NEFTUNE_NOISE_ALPHA if NEFTUNE_NOISE_ALPHA else None,\n",
-          '        eval_strategy="steps",\n',
-          "        eval_steps=100,\n",
-          "        load_best_model_at_end=True,\n",
-          '        metric_for_best_model="eval_loss",\n',
-          "        # rsLoRA: alpha/sqrt(r) scaling (no runtime cost)\n",
-          "        # use_rslora configured via get_peft_model in Section 7.3\n",
-          "    ),\n",
-          "    callbacks=[rich_callback],\n",
-          ")\n",
-          'print("Trainer created")\n',
-          'print(f"  Mode: {MODE.upper()}")\n',
-          'print(f"  Epochs: {NUM_EPOCHS}, Batch: {BATCH_SIZE}, Grad accum: {GRAD_ACCUM}")\n',
-          'print(f"  Effective batch: {BATCH_SIZE * GRAD_ACCUM}")\n',
-          'print(f"  LoRA: r={LORA_R}, alpha={LORA_ALPHA}, dropout=0")\n',
-          'print(f"  LR: {LEARNING_RATE}, scheduler: {LR_SCHEDULER}, warmup: {WARMUP_RATIO}")\n',
-          'print(f"  Max seq: {MAX_SEQ_LENGTH}, no packing, NEFTune: {NEFTUNE_NOISE_ALPHA}, rsLoRA: {USE_RSLORA}")\n',
-          'print(f"  Total steps: ~{len(train_dataset) * NUM_EPOCHS // (BATCH_SIZE * GRAD_ACCUM)}")']),
-    code(H[25]["source"]), md(H[26]["source"]),
-    code(H[27]["source"]), code(H[28]["source"]), md(H[29]["source"]), code(H[30]["source"]), code(H[31]["source"]),
+    md(["# Fine-tune LLMs for CTF/Coding",
+        "",
+        "Complete pipeline: data scraping -> synthesis -> training -> export",
+        "",
+        "**Setup:**",
+        "1. Runtime -> Change runtime type -> **T4 GPU**",
+        "2. Run cells top-to-bottom",
+        "3. No external files needed — everything is built in",
+        "",
+        "**Expected runtime:** ~2-3 hours for 3 epochs on T4"]),
+
+    md(["## Section 1: Install Dependencies"]),
+
+    code([
+        "# ============================================================",
+        "# 1.1 Detect environment + install packages",
+        "# ============================================================",
+        "import os, re, sys, json, time, shutil, tempfile",
+        'import warnings; warnings.filterwarnings("ignore", category=FutureWarning)',
+        "from pathlib import Path",
+        "",
+        'IS_KAGGLE = "KAGGLE_USERNAME" in os.environ',
+        'IS_COLAB = "COLAB_" in "".join(os.environ.keys())',
+        'WORK_DIR = "/kaggle/working" if IS_KAGGLE else "/content"',
+        'print(f"Environment: {\'Kaggle\' if IS_KAGGLE else \'Colab\' if IS_COLAB else \'Local\'}")',
+        "",
+        "if IS_COLAB or IS_KAGGLE:",
+        "    import torch",
+        '    v = re.match(r"[\\d]{1,}\\.[\\d]{1,}", str(torch.__version__)).group(0)',
+        '    xf = "xformers==" + {"2.10":"0.0.34","2.9":"0.0.33.post1","2.8":"0.0.32.post2"}.get(v, "0.0.34")',
+        "    !pip install -q sentencepiece protobuf datasets huggingface_hub hf_transfer requests gitpython pyyaml tqdm",
+        "    !pip install --no-deps unsloth_zoo bitsandbytes accelerate {xf} peft trl triton unsloth",
+        '    !pip install --no-deps --upgrade "torchao>=0.16.0"',
+        '    !pip install --no-deps transformers==5.5.0 "tokenizers>=0.22.0,<=0.23.0"',
+        "    !pip install --no-deps -q flash-linear-attention causal-conv1d 2>&1 | tail -3",
+        "    torch._dynamo.config.recompile_limit = 64",
+    ]),
+
+    code([
+        "# ============================================================",
+        "# 1.2 Import libraries and verify environment",
+        "# ============================================================",
+        "import requests, yaml",
+        "from git import Repo",
+        "from datasets import load_dataset",
+        "from tqdm.notebook import tqdm",
+        "import torch",
+        "",
+        'print(f"\\n=== Environment ===")',
+        'print(f"PyTorch:  {torch.__version__}")',
+        'print(f"CUDA:     {torch.cuda.is_available()}")',
+        "if torch.cuda.is_available():",
+        "    gpu_name = torch.cuda.get_device_name(0)",
+        "    gpu_mem = torch.cuda.get_device_properties(0).total_memory / 1e9",
+        '    print(f"GPU:      {gpu_name} ({gpu_mem:.1f} GB)")',
+        '    if "T4" not in gpu_name:',
+        "        print(f\"WARNING: Optimized for T4. You have {gpu_name}.\")",
+        "    !nvidia-smi --query-gpu=name,memory.total,memory.used,memory.free,utilization.gpu --format=csv 2>/dev/null || true",
+        "else:",
+        '    print("ERROR: No GPU detected! Runtime -> Change runtime type -> T4 GPU")',
+    ]),
+
+    md(["## Section 2: Decode source files"]),
+    md(["### File Manifest\n"] + manifest),
+    code(decode_source),
+
+    md(["## Section 3: Choose Model + Mode"]),
+    code([
+        "# ============================================================",
+        "# 3.0 Select model and mode",
+        "# ============================================================",
+        '# MODEL = "gemma4"      -> Gemma 4 E4B (unsloth)',
+        '# MODEL = "gemma4-12b"  -> Gemma 4 12B (google)',
+        '# MODEL = "qwen35"      -> Qwen 3.5 9B (unsloth)',
+        '# MODEL = "qwen35-4b"   -> Qwen 3.5 4B (unsloth)',
+        '# MODEL = "ornith10"    -> Ornith 1.0 9B (deepreinforce)',
+        '# MODE = "fast"     -> 1 epoch, ~30 min',
+        '# MODE = "quality"  -> 3 epochs, ~50-70 min',
+        'MODEL = "qwen35-4b"',
+        'MODE = "fast"',
+        "",
+        "# ============================================================",
+        "# 3.1 Load config + apply mode overrides",
+        "# ============================================================",
+        "import yaml",
+        'with open(f"/content/configs/{MODEL}.yaml") as f:',
+        "    cfg = yaml.safe_load(f)",
+        "mc = cfg.get(\"model\", cfg)",
+        "tc = cfg.get(\"training\", {})",
+        "",
+        'MODEL_NAME = mc["name"]',
+        "LORA_R = mc[\"r\"]",
+        "LORA_ALPHA = mc[\"lora_alpha\"]",
+        "MAX_SEQ_LENGTH = mc.get(\"max_seq_length\", 4096)",
+        "NUM_EPOCHS = tc.get(\"num_train_epochs\", 3)",
+        "GRAD_ACCUM = tc.get(\"gradient_accumulation_steps\", 4)",
+        "WARMUP_RATIO = tc.get(\"warmup_ratio\", 0.05)",
+        "USE_RSLORA = mc.get(\"use_rslora\", True)",
+        "NEFTUNE_ALPHA = tc.get(\"neftune_noise_alpha\", 5)",
+        "",
+        "if MODE == \"fast\":",
+        "    LORA_R = min(LORA_R, 8)",
+        "    LORA_ALPHA = min(LORA_ALPHA, 16)",
+        "    MAX_SEQ_LENGTH = min(MAX_SEQ_LENGTH, 2048)",
+        "    NUM_EPOCHS = 1",
+        "    GRAD_ACCUM = min(GRAD_ACCUM, 4)",
+        "",
+        'CHAT_TEMPLATE = "gemma-4" if MODEL.startswith("gemma") else "chatml"',
+        'OUTPUT_DIR = f"{WORK_DIR}/outputs/{MODEL}-ctf"',
+        "",
+        'print(f"\\n{MODEL.upper()} / {MODE.upper()}")',
+        'print(f"  LoRA: r={LORA_R}, a={LORA_ALPHA}, rsLoRA={USE_RSLORA}")',
+        'print(f"  Epochs: {NUM_EPOCHS} | Grad accum: {GRAD_ACCUM} | Seq: {MAX_SEQ_LENGTH}")',
+        'print(f"  Chat: {CHAT_TEMPLATE}")',
+        'est = "~30 min (FAST)" if MODE == "fast" else "~50-70 min (QUALITY)"',
+        'print(f"  Est: {est}")',
+    ]),
+
+    md(["## Section 4: Build Dataset"]),
+    code([
+        "# ============================================================",
+        "# 4.0 Build dataset — import from src/",
+        "# ============================================================",
+        "from src.build_dataset import build_writeups_dataset, build_docs_dataset, build_ctfdojo_dataset",
+        "from src.download_datasets import (download_ctf_webserver, download_opencode_reasoning,",
+        "    download_fenrir, download_ctf_solver, download_summermc_ctf,",
+        "    download_trendyol_cybersec, download_ctf_crypto_analysis)",
+        "from src.synthetic_rev_pwn import save_to_file",
+        "from src.process_data import convert_alpaca_to_chat",
+        "import glob",
+        "",
+        'for d in [f"{WORK_DIR}/data/raw", f"{WORK_DIR}/data/processed", f"{WORK_DIR}/data/merged"]:',
+        "    os.makedirs(d, exist_ok=True)",
+        "",
+        'print("Building datasets...")',
+        "t0 = time.time()",
+        "mr = 30 if MODE == \"fast\" else 999999",
+        "ms = 200 if MODE == \"fast\" else 5000",
+        'build_writeups_dataset(f"{WORK_DIR}/data/raw/writeups.jsonl", mr)',
+        'build_docs_dataset(f"{WORK_DIR}/data/raw/docs.jsonl", 5 if MODE == "fast" else 999999)',
+        'build_ctfdojo_dataset(f"{WORK_DIR}/data/raw/ctfdojo.jsonl", 200 if MODE == "fast" else 500)',
+        'save_to_file(f"{WORK_DIR}/data/raw/synthetic_rev_pwn.jsonl")',
+        'download_ctf_webserver(f"{WORK_DIR}/data/raw/ctf_webserver.jsonl")',
+        'download_opencode_reasoning(f"{WORK_DIR}/data/raw/opencode_reasoning.jsonl", ms)',
+        'download_fenrir(f"{WORK_DIR}/data/raw/fenrir_cybersecurity.jsonl", ms)',
+        'download_ctf_solver(f"{WORK_DIR}/data/raw/ctf_solver.jsonl", ms)',
+        'download_summermc_ctf(f"{WORK_DIR}/data/raw/summermc_ctf.jsonl", ms)',
+        'download_trendyol_cybersec(f"{WORK_DIR}/data/raw/trendyol_cybersec.jsonl", ms)',
+        'download_ctf_crypto_analysis(f"{WORK_DIR}/data/raw/ctf_crypto_analysis.jsonl", ms)',
+        'print(f"  Build: {time.time()-t0:.1f}s")',
+        "",
+        'print("Processing to ChatML...")',
+        "t0 = time.time()",
+        'for rf in glob.glob(f"{WORK_DIR}/data/raw/*.jsonl"):',
+        "    name = Path(rf).stem; n = 0",
+        '    with open(rf) as fi, open(f"{WORK_DIR}/data/processed/{name}.jsonl", "w") as fo:',
+        "        for line in fi:",
+        "            item = json.loads(line); out = item.get(\"output\", \"\")",
+        "            if not out: continue",
+        "            r = convert_alpaca_to_chat(item.get(\"instruction\",\"\"), item.get(\"input\",\"\"),",
+        "                out, item.get(\"category\",\"ctf\"))",
+        '            fo.write(json.dumps(r) + "\\n"); n += 1',
+        "        print(f\"  {name}: {n}\")",
+        "",
+        'merged = f"{WORK_DIR}/data/merged/train.jsonl"',
+        "total = 0",
+        'with open(merged, "w") as fo:',
+        '    for pf in glob.glob(f"{WORK_DIR}/data/processed/*.jsonl"):',
+        "        with open(pf) as fi:",
+        "            for line in fi:",
+        "                fo.write(line); total += 1",
+        f'print(f"Merged {{total}} examples")',
+        'print(f"  Process: {time.time()-t0:.1f}s")',
+    ]),
+
+    md(["## Section 5: Load Model + Train"]),
+    code([
+        "# ============================================================",
+        "# 5.0 Load model with Unsloth",
+        "# ============================================================",
+        "from unsloth import FastLanguageModel, get_chat_template",
+        "",
+        'print(f"Loading {MODEL_NAME}...")',
+        "t0 = time.time()",
+        "",
+        "if MODEL.startswith(\"gemma\"):",
+        "    from unsloth import FastVisionModel",
+        "    model, processor = FastVisionModel.from_pretrained(",
+        '        model_name=MODEL_NAME, load_in_4bit=True,',
+        '        use_gradient_checkpointing="unsloth")',
+        "    tokenizer = processor.tokenizer",
+        '    tokenizer = get_chat_template(tokenizer, "gemma-4")',
+        "else:",
+        "    model, tokenizer = FastLanguageModel.from_pretrained(",
+        '        model_name=MODEL_NAME, max_seq_length=MAX_SEQ_LENGTH,',
+        "        load_in_4bit=True, dtype=None)",
+        '    tokenizer = get_chat_template(tokenizer, "chatml")',
+        'print(f"  Loaded in {time.time()-t0:.1f}s")',
+        "",
+        "# ============================================================",
+        "# 5.1 Configure LoRA",
+        "# ============================================================",
+        'print("LoRA...")',
+        "t0 = time.time()",
+        'TGTS = ["q_proj","k_proj","v_proj","o_proj","gate_proj","up_proj","down_proj"]',
+        "",
+        "if MODEL.startswith(\"gemma\"):",
+        "    from unsloth import FastVisionModel",
+        "    model = FastVisionModel.get_peft_model(model, finetune_vision_layers=False,",
+        "        finetune_language_layers=True, r=LORA_R, lora_alpha=LORA_ALPHA,",
+        '        lora_dropout=0, bias="none", use_rslora=USE_RSLORA)',
+        "else:",
+        "    from unsloth import FastLanguageModel",
+        "    model = FastLanguageModel.get_peft_model(model, r=LORA_R,",
+        "        target_modules=TGTS, lora_alpha=LORA_ALPHA, lora_dropout=0,",
+        '        bias="none", use_gradient_checkpointing="unsloth",',
+        "        use_rslora=USE_RSLORA)",
+        'print(f"  LoRA r={LORA_R}, a={LORA_ALPHA}, rsLoRA={USE_RSLORA} ({time.time()-t0:.1f}s)")',
+        "",
+        "# ============================================================",
+        "# 5.2 Load dataset",
+        "# ============================================================",
+        'print("Loading dataset...")',
+        "t0 = time.time()",
+        'ds = load_dataset("json", data_files={"train": merged}, split="train")',
+        "ds = ds.filter(lambda ex: bool(ex.get(\"messages\",[])) and bool(ex[\"messages\"][-1].get(\"content\",\"\")))",
+        'print(f"  {len(ds)} examples")',
+        "",
+        "at = tokenizer.tokenizer if hasattr(tokenizer,\"tokenizer\") else tokenizer",
+        "def len_ok(ex):",
+        '    t = at.apply_chat_template(ex["messages"], tokenize=False)',
+        "    return len(at.encode(t)) <= MAX_SEQ_LENGTH",
+        "before = len(ds); ds = ds.filter(len_ok, desc=\"Filter\")",
+        'print(f"  {len(ds)} (dropped {before-len(ds)} long)")',
+        "",
+        "split = ds.train_test_split(test_size=0.1, seed=42)",
+        'td, ed = split["train"], split["test"]',
+        'print(f"  Train: {len(td)}, Eval: {len(ed)} ({time.time()-t0:.1f}s)")',
+    ]),
+
+    code([
+        "# ============================================================",
+        "# 5.3 Train with SFTTrainer",
+        "# ============================================================",
+        "from trl import SFTTrainer, SFTConfig",
+        "from transformers import TrainerCallback",
+        "",
+        "class ProgressCB(TrainerCallback):",
+        "    def __init__(self):",
+        "        self.pbar = None; self.start = None",
+        "    def on_train_begin(self, args, state, control, **kwargs):",
+        "        self.start = time.time()",
+        "        self.pbar = tqdm(total=state.max_steps, desc=\"Training\", unit=\"step\")",
+        "        mem = torch.cuda.memory_allocated()/1e9 if torch.cuda.is_available() else 0",
+        '        print(f"VRAM: {mem:.1f}GB/{torch.cuda.get_device_properties(0).total_memory/1e9:.1f}GB")',
+        "    def on_log(self, args, state, control, logs=None, **kwargs):",
+        "        if self.pbar and logs:",
+        '            self.pbar.set_postfix(loss=f"{logs.get(\'loss\',0):.4f}")',
+        "            self.pbar.update(1)",
+        "    def on_train_end(self, args, state, control, **kwargs):",
+        "        if self.pbar: self.pbar.close()",
+        '        if self.start: print(f"Done in {(time.time()-self.start)/60:.1f} min")',
+        "",
+        "trainer = SFTTrainer(",
+        "    model=model, processing_class=tokenizer,",
+        "    train_dataset=td, eval_dataset=ed,",
+        "    args=SFTConfig(",
+        "        max_seq_length=MAX_SEQ_LENGTH, per_device_train_batch_size=1,",
+        "        gradient_accumulation_steps=GRAD_ACCUM, warmup_ratio=WARMUP_RATIO,",
+        "        num_train_epochs=NUM_EPOCHS, learning_rate=float(LEARNING_RATE),",
+        '        weight_decay=0.001, lr_scheduler_type="cosine", logging_steps=10,',
+        '        output_dir=OUTPUT_DIR, optim="adamw_8bit", seed=3407,',
+        '        save_strategy="steps", save_steps=100, save_total_limit=2,',
+        "        fp16=not torch.cuda.is_bf16_supported(), bf16=torch.cuda.is_bf16_supported(),",
+        '        assistant_only_loss=True, report_to="none",',
+        '        eval_strategy="steps", eval_steps=100,',
+        '        load_best_model_at_end=True, metric_for_best_model="eval_loss",',
+        "    ),",
+        "    callbacks=[ProgressCB()],",
+        ")",
+        "",
+        'print(f"\\nTraining ({NUM_EPOCHS} epochs, bs={GRAD_ACCUM})")',
+        "trainer.train()",
+        "",
+        'print("\\n=== Saving LoRA ===")',
+        'lp = f"{OUTPUT_DIR}/lora"',
+        "model.save_pretrained(lp); tokenizer.save_pretrained(lp)",
+        'print(f"  Saved {lp}")',
+    ]),
+
+    md(["## Section 6: Export + Evaluate"]),
+    code([
+        "# ============================================================",
+        "# 6.0 Export models",
+        "# ============================================================",
+        "if not MODEL.startswith(\"gemma\"):",
+        '    print("GGUF...")',
+        '    model.save_pretrained_gguf(f"{OUTPUT_DIR}/gguf", tokenizer, quantization_method="q4_k_m")',
+        '    print(f"  {OUTPUT_DIR}/gguf")',
+        '    print("Merged...")',
+        '    model.save_pretrained_merged(f"{OUTPUT_DIR}/merged", tokenizer, save_method="merged_16bit")',
+        '    print(f"  {OUTPUT_DIR}/merged")',
+        "else:",
+        '    print("Skip GGUF/merged (FastVisionModel)")',
+    ]),
+
+    code([
+        "# ============================================================",
+        "# 6.1 Evaluate",
+        "# ============================================================",
+        'print("\\n=== Evaluation ===\\n")',
+        "import subprocess",
+        'r = subprocess.run(["python", "src/eval.py", "--model", MODEL, "--adapter", lp],',
+        "    capture_output=True, text=True, cwd=WORK_DIR)",
+        "print(r.stdout[-2000:] if len(r.stdout) > 2000 else r.stdout)",
+        "if r.returncode: print(f\"Eval error: {r.stderr[-300:]}\")",
+    ]),
 ]
 
 notebook = {
     "cells": cells,
-    "metadata": {"kernelspec": {"display_name": "Python 3", "language": "python", "name": "python3"},
-                 "language_info": {"name": "python", "version": "3.11"}},
-    "nbformat": 4, "nbformat_minor": 4
+    "metadata": {
+        "kernelspec": {"display_name": "Python 3", "language": "python", "name": "python3"},
+        "language_info": {"name": "python", "version": "3.11"},
+    },
+    "nbformat": 4,
+    "nbformat_minor": 4,
 }
 
 NB_PATH.write_text(json.dumps(notebook, indent=1))
-md_count = sum(1 for c in cells if c["cell_type"] == "markdown")
-code_count = sum(1 for c in cells if c["cell_type"] == "code")
-print(f"Generated {NB_PATH} ({len(cells)} cells: {md_count} markdown, {code_count} code)")
+md_c = sum(1 for c in cells if c["cell_type"] == "markdown")
+code_c = sum(1 for c in cells if c["cell_type"] == "code")
+print(f"Generated {NB_PATH} ({len(cells)} cells: {md_c} md, {code_c} code)")
+print(f"Baked {len(manifest)} files from src/ and configs/")

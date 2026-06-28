@@ -15,7 +15,7 @@
   <meta name="twitter:title" content="CTF-LLM | Fine-tune LLMs to solve CTF challenges">
   <meta name="twitter:description" content="End-to-end pipeline for fine-tuning open-source LLMs on CTF challenges and competitive programming using Unsloth + QLoRA on Google Colab T4.">
   
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2032%2032%22%3E%0A%20%20%3Crect%20width%3D%2232%22%20height%3D%2232%22%20rx%3D%225%22%20fill%3D%22%23282a36%22/%3E%0A%20%20%3Cpath%20d%3D%22M16%205%20L23%209%20L23%2017%20C23%2022%2016%2027%2016%2027%20C16%2027%209%2022%209%2017%20L9%209%20Z%22%20fill%3D%22%23bd93f9%22%20opacity%3D%220.9%22/%3E%0A%20%20%3Cpath%20d%3D%22M14%2016%20L16%2013%20L18%2018%20L20%2014%22%20fill%3D%22none%22%20stroke%3D%22%23282a36%22%20stroke-width%3D%221%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22/%3E%0A%3C/svg%3E">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2210%22%20fill%3D%22%23282a36%22/%3E%0A%20%20%3Cpath%20d%3D%22M20%2020%20L36%2032%20L20%2044%22%20fill%3D%22none%22%20stroke%3D%22%23bd93f9%22%20stroke-width%3D%223.5%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22/%3E%0A%20%20%3Ccircle%20cx%3D%2244%22%20cy%3D%2232%22%20r%3D%224%22%20fill%3D%22%2350fa7b%22/%3E%0A%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -471,8 +471,8 @@
   <div class="sidebar-brand">
     <div class="logo"><svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
   <rect width="64" height="64" rx="14" fill="#44475a"/>
-  <path d="M32 8 L48 18 L48 34 C48 46 32 56 32 56 C32 56 16 46 16 34 L16 18 Z" fill="none" stroke="#bd93f9" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M26 34 L30 26 L34 38 L38 30" fill="none" stroke="#50fa7b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M18 16 L34 32 L18 48" fill="none" stroke="#bd93f9" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <polygon points="44,24 46,30 52,32 46,34 44,40 42,34 36,32 42,30" fill="#50fa7b"/>
 </svg></div>
     <div class="name">CTF-LLM</div>
     <div class="tagline">fine-tune · CTF · qLoRA</div>
@@ -515,6 +515,12 @@
 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polygon points="6 3 20 12 6 21"/></svg>
 
 </span> Quick Start</a></li>
+      
+      <li><a href="#notebook"><span class="icon">
+
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polygon points="6 3 20 12 6 21"/></svg>
+
+</span> Notebook Generation</a></li>
       
       <li><a href="#stack"><span class="icon">
 
@@ -671,6 +677,25 @@ uv sync
 
 # Evaluate trained model
 ./finetune.sh gemma4 --eval
+</code></pre>
+
+      
+    </div>
+  </section>
+  
+  <section id="notebook">
+    <div class="container">
+      <h2>Notebook Generation</h2>
+
+      
+      <pre><code># The Colab notebook is auto-generated — never edit it directly.
+# It bakes all src/*.py + configs/*.yaml into a decode cell.
+
+# Regenerate:
+python3 scripts/generate_notebook.py
+
+# The notebook decodes all files to /content/ on Colab at runtime
+# and imports from src/ for every operation — zero code duplication.
 </code></pre>
 
       

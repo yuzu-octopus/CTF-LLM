@@ -56,7 +56,7 @@ This reuses the existing converter from `process_data.py`.
 
 ### Step 3: Fix Gemma notebook crash — guard GGUF/merged saves
 
-In `notebooks/qwen4b_self_contained.ipynb`, around lines 963-974:
+In `notebooks/self_contained.ipynb`, around lines 963-974:
 
 ```python
 # Save model — Gemma models don't support GGUF or merged saves
@@ -143,7 +143,7 @@ grep -c 'model_utils' finetune.sh
 
 - `requirements-colab.txt`
 - `src/train.py`
-- `notebooks/qwen4b_self_contained.ipynb`
+- `notebooks/self_contained.ipynb`
 - `finetune.sh`
 - `configs/gemma4.yaml`
 - `configs/gemma4-12b.yaml`
