@@ -1,11 +1,8 @@
-# Default: quality mode (r=32, alpha=32). Fast mode (r=8, alpha=8) is
-# controlled by the notebook MODEL_CONFIGS dict; override via --mode fast.
-# Gemma 4 12B Unified Configuration — Unsloth recommended: alpha == r (1:1)
-# Encoder-free multimodal (text + image + audio), 256K context
-# 4-bit QLoRA on T4 16GB (tight: ~10-12GB with LoRA + optimizer)
-# Model: google/gemma-4-12B-it (no pre-quantized variant from Unsloth)
+# Ornith 1.0 9B Configuration — post-trained from Qwen 3.5 by DeepReinforce
+# MIT license, 262K context, Qwen-based chat template
+# Unsloth-compatible via FastLanguageModel with 4-bit QLoRA on T4
 model:
-  name: google/gemma-4-12B-it
+  name: deepreinforce-ai/Ornith-1.0-9B
   target_modules:
     - q_proj
     - k_proj
@@ -32,7 +29,7 @@ training:
   max_grad_norm: 0.3
   lr_scheduler_type: cosine
   neftune_noise_alpha: 5
-  gradient_accumulation_steps: 8
+  gradient_accumulation_steps: 4
   optim: adamw_8bit
   seed: 3407
   save_strategy: steps

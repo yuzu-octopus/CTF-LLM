@@ -1,6 +1,6 @@
 # CTF-LLM
 
-Fine-tuning pipeline for LLMs (Gemma 4 E4B, Gemma 4 12B, Qwen 3.5 4B/9B) targeting CTF and competitive programming. Unsloth + QLoRA on Google Colab T4 (16GB).
+Fine-tuning pipeline for LLMs (Gemma 4, Qwen 3.5, Ornith 1.0) targeting CTF and competitive programming. Unsloth + QLoRA on Google Colab T4 (16GB).
 
 ## Quick Start
 
@@ -37,7 +37,7 @@ finetuning/
 ├── data/eval/
 │   └── ctf_bench.jsonl      # 210 curated CTF challenges (pwn/rev/crypto/web)
 ├── configs/
-│   ├── gemma4.yaml, gemma4-12b.yaml, qwen35.yaml, qwen35-4b.yaml
+│   ├── gemma4.yaml, gemma4-12b.yaml, qwen35.yaml, qwen35-4b.yaml, ornith10.yaml, ornith10.yaml
 ├── notebooks/
 │   └── qwen4b_self_contained.ipynb   # ONLY notebook — full pipeline
 ├── data/{raw,processed,merged}/       # gitignored
@@ -84,7 +84,7 @@ grep -c '"output": ""' data/merged/train.jsonl  # should be 0
 
 - **Use `uv run`** for Python scripts, never raw `python` (PEP 668)
 - **Use `colab-cli` skill** for all Colab integration — don't try raw ssh/Drive
-- **4 valid `--model` values**: `gemma4`, `gemma4-12b`, `qwen35`, `qwen35-4b` — exact match only
+- **5 valid `--model` values**: `gemma4`, `gemma4-12b`, `qwen35`, `qwen35-4b`, `ornith10` — exact match only
 - **T4 16GB VRAM ceiling** — `batch_size=1`, `max_seq_length=4096` are mandatory
 - **Use `tqdm.notebook`** in Colab notebooks (not plain `tqdm`)
 - **One notebook only** (`qwen4b_self_contained.ipynb`) — the training-only variant was deleted
@@ -187,6 +187,7 @@ uv run src/process_data.py --merge --input data/processed --output data/merged
 
 - **YAML `2e-4` parses as string** with PyYAML — cast to `float()` in code
 - **Fragile model matching**: use `if model_key.startswith("gemma"):` not `"gemma" in model_key` (catches both gemma4 and gemma4-12b)
+- **Ornith 1.0** uses Qwen-based chat template (`chatml`) and FastLanguageModel path — same as Qwen 3.5
 - **CryptoHack/pwncollege repos extract 0 examples** — non-standard markdown, solution boundary detection misses them
 - **gmpy2 lives at `gmpy2/gmpy2`** on GitHub (not `pydata/gmpy2`)
 - **Qwen 3.5 has no pre-quantized bnb-4bit variants** — Unsloth applies 4-bit at runtime
@@ -197,7 +198,7 @@ uv run src/process_data.py --merge --input data/processed --output data/merged
 
 ## Model Configs
 
-4 models × 2 modes (fast/quality) = 8 configs in notebook MODEL_CONFIGS dict:
+5 models × 2 modes (fast/quality) = 10 configs in notebook MODEL_CONFIGS dict:
 
 | Model | Mode | r | alpha | seq_len | epochs | grad_accum | Notes |
 |-------|------|---|-------|---------|--------|------------|-------|
@@ -209,6 +210,8 @@ uv run src/process_data.py --merge --input data/processed --output data/merged
 | qwen35-4b | quality | 16 | 32 | 4096 | 2 | 4 | 4B, comfortable on T4 |
 | qwen35 | fast | 8 | 16 | 2048 | 1 | 4 | 9B, comfortable on T4 |
 | qwen35 | quality | 32 | 64 | 4096 | 2 | 8 | 9B, comfortable on T4 |
+| ornith10 | fast | 8 | 16 | 2048 | 1 | 4 | 9B, comfortable on T4 |
+| ornith10 | quality | 32 | 64 | 4096 | 2 | 4 | 9B, rsLoRA, comfortable on T4 |
 
 To add a new model:
 1. Create `configs/<name>.yaml`

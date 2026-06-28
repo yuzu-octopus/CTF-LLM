@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/yuzu-octopus/CTF-LLM/actions/workflows/ci.yml/badge.svg)](https://github.com/yuzu-octopus/CTF-LLM/actions/workflows/ci.yml)
 
-Fine-tune open-source LLMs (Gemma 4 E4B, Qwen 3.5 9B/4B) to excel at cybersecurity CTF challenges and competitive programming using [Unsloth](https://unsloth.ai) with QLoRA on Google Colab's free tier.
+Fine-tune open-source LLMs (Gemma 4, Qwen 3.5, Ornith 1.0) to excel at cybersecurity CTF challenges and competitive programming using [Unsloth](https://unsloth.ai) with QLoRA on Google Colab's free tier.
 
 ## What This Does
 
@@ -26,7 +26,10 @@ uv sync
 # Run full pipeline (build data + train)
 ./finetune.sh gemma4 --all
 
-# Or run steps individually
+# Or use Ornith 1.0 9B (strongest 9B model for agentic coding)
+./finetune.sh ornith10 --all
+
+# Run steps individually
 ./finetune.sh gemma4 --build-data  # Just build datasets
 ./finetune.sh gemma4 --train       # Just train (requires data)
 ./finetune.sh gemma4 --eval        # Evaluate trained model
@@ -86,6 +89,10 @@ Alpaca Format:                    ChatML Format:
 The system prompt is automatically selected based on the content category (CTF vs competitive programming).
 
 > **Tip:** pass `--no-system-prompt` to `process_data.py` to skip inlining per-example system prompts into the ChatML messages. Saves ~6.2M characters across a 17K-example corpus. The system prompt is then set once via `tokenizer.chat_template` at training time.
+
+### Training Configuration
+
+All models use `use_rslora=True` (rank-stabilized LoRA), `learning_rate=2e-4`, cosine LR schedule, weight decay 0.001, and neftune noise alpha 5. Training hyperparameters vary by model size (see configs/*.yaml).
 
 ### 3. Model Training (`src/train.py`)
 
@@ -264,6 +271,16 @@ model:
 3. *(Required for the Colab notebook)* Add `(model, mode)` entries to the `MODEL_CONFIGS` dict in `notebooks/qwen4b_self_contained.ipynb`
 4. *(Required for `finetune.sh`)* Add `newmodel` to the model list and the config-upload line in `finetune.sh`
 5. Run: `./finetune.sh newmodel --all`
+
+### Current Models
+
+| Model | Key | Params | VRAM (4-bit) | T4 Fit |
+|-------|-----|--------|-------------|--------|
+| Gemma 4 E4B | `gemma4` | ~4.5B | ~5 GB | ✅ Comfortable |
+| Gemma 4 12B | `gemma4-12b` | ~12B | ~11 GB | ⚠️ Tight |
+| Qwen 3.5 9B | `qwen35` | ~9B | ~6 GB | ✅ Comfortable |
+| Qwen 3.5 4B | `qwen35-4b` | ~4B | ~4 GB | ✅ Comfortable |
+| Ornith 1.0 9B | `ornith10` | ~9B | ~6 GB | ✅ Comfortable |
 
 ## Hardware Requirements
 

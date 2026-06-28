@@ -27,11 +27,16 @@ models:
       max_seq_length: 4096
       batch_size: 1
       load_in_4bit: true
+      use_rslora: true
       use_gradient_checkpointing: unsloth
     training:
-      num_train_epochs: 2
-      learning_rate: 1.0e-4
+      num_train_epochs: 3
+      learning_rate: 2.0e-4
       warmup_ratio: 0.05
+      weight_decay: 0.001
+      max_grad_norm: 0.3
+      lr_scheduler_type: cosine
+      neftune_noise_alpha: 5
       gradient_accumulation_steps: 4
       optim: adamw_8bit
       seed: 3407
@@ -61,11 +66,16 @@ models:
       max_seq_length: 4096
       batch_size: 1
       load_in_4bit: true
+      use_rslora: true
       use_gradient_checkpointing: unsloth
     training:
-      num_train_epochs: 2
-      learning_rate: 1.0e-4
+      num_train_epochs: 3
+      learning_rate: 2.0e-4
       warmup_ratio: 0.05
+      weight_decay: 0.001
+      max_grad_norm: 0.3
+      lr_scheduler_type: cosine
+      neftune_noise_alpha: 5
       gradient_accumulation_steps: 8
       optim: adamw_8bit
       seed: 3407
@@ -95,11 +105,16 @@ models:
       max_seq_length: 4096
       batch_size: 1
       load_in_4bit: true
+      use_rslora: true
       use_gradient_checkpointing: unsloth
     training:
-      num_train_epochs: 2
-      learning_rate: 1.0e-4
+      num_train_epochs: 3
+      learning_rate: 2.0e-4
       warmup_ratio: 0.05
+      weight_decay: 0.001
+      max_grad_norm: 0.3
+      lr_scheduler_type: cosine
+      neftune_noise_alpha: 5
       gradient_accumulation_steps: 8
       optim: adamw_8bit
       seed: 3407
@@ -129,12 +144,57 @@ models:
       max_seq_length: 4096
       batch_size: 1
       load_in_4bit: true
+      use_rslora: true
       use_gradient_checkpointing: unsloth
     training:
-      num_train_epochs: 2
-      learning_rate: 1.0e-4
+      num_train_epochs: 3
+      learning_rate: 2.0e-4
       warmup_ratio: 0.05
+      weight_decay: 0.001
+      max_grad_norm: 0.3
+      lr_scheduler_type: cosine
+      neftune_noise_alpha: 5
       gradient_accumulation_steps: 4
+      optim: adamw_8bit
+      seed: 3407
+      save_strategy: steps
+      save_steps: 100
+      save_total_limit: 2
+      eval_strategy: steps
+      eval_steps: 100
+      load_best_model_at_end: true
+      metric_for_best_model: eval_loss
+
+
+  ornith10:
+    model:
+      name: deepreinforce-ai/Ornith-1.0-9B
+      target_modules:
+        - q_proj
+        - k_proj
+        - v_proj
+        - o_proj
+        - gate_proj
+        - up_proj
+        - down_proj
+      r: 32
+      lora_alpha: 64
+      lora_dropout: 0
+      bias: none
+      max_seq_length: 4096
+      batch_size: 1
+      load_in_4bit: true
+      use_rslora: true
+      use_gradient_checkpointing: unsloth
+    training:
+      num_train_epochs: 3
+      learning_rate: 2.0e-4
+      warmup_ratio: 0.05
+      weight_decay: 0.001
+      max_grad_norm: 0.3
+      lr_scheduler_type: cosine
+      neftune_noise_alpha: 5
+      gradient_accumulation_steps: 8
       optim: adamw_8bit
       seed: 3407
       save_strategy: steps
