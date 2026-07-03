@@ -150,9 +150,6 @@ The evaluator ships signal-extraction features tuned for A/B recipe comparison:
 - **McNemar's paired test** on `--compare` runs — surfaces which side wins significantly (p < 0.05) and prints a per-question diff table.
 - **`--samples N`** for pass@k (e.g. `--samples 3`) — unbiased pass@1 vs pass@k per challenge; pass@3 typically jumps 5-15% on hard problems.
 - **Contamination check** at startup — SHA256 hash overlap between bench prompts and training corpus (>5% triggers a warning).
-- **Suspicious-memorization flag** — marks any response containing writeup markers ("Hack The Box", "writeup from", "walkthrough" etc.) so model outputs can be filtered pre-scoring.
-- **Length-bias probe** — compares mean response length of correct vs wrong answers to detect padding-based score inflation.
-- **Difficulty-balanced accuracy** — equal weight per category-difficulty bucket prevents easy-bucket domination.
 
 ### 5. Colab Integration (`finetune.sh`)
 
@@ -188,21 +185,21 @@ finetuning/
 │   ├── gen_eval_bench.py    # Generates 210-question CTF benchmark (datagen, no GPU)
 │   └── eval.py              # CTF model evaluator (210-question benchmark)
 │
-├── tests/                   # Python test suite (68 tests, CI via GitHub Actions)
+├── tests/                   # Python test suite (70 tests, CI via GitHub Actions)
 │   ├── test_eval.py         # 24 tests: grading functions + Wilson CI
 │   ├── test_eval_orchestration.py  # 8 tests: result aggregation, subtask grading, save
 │   ├── test_gen_eval_bench.py      # 12 tests: benchmark structure, task types, IDs
 │   ├── test_build_dataset.py       # 6 tests: extraction functions
-│   ├── test_build_dataset_expanded.py  # 6 tests: CTF content, solution text, repos
 │   ├── test_download_datasets.py  # 4 tests: QA extraction, HF fallback
 │   ├── test_loss_masking.py       # 3 tests: loss masking logic
 │   └── test_process_data.py      # 5 tests: content detection
 │
-├── configs/                 # Model-specific configurations (4 total)
+├── configs/                 # Model-specific configurations (5 total)
 │   ├── gemma4.yaml          # Gemma 4 E4B settings (quality-mode default)
 │   ├── gemma4-12b.yaml      # Gemma 4 12B settings
 │   ├── qwen35.yaml          # Qwen 3.5 9B settings
-│   └── qwen35-4b.yaml       # Qwen 3.5 4B settings
+│   ├── qwen35-4b.yaml       # Qwen 3.5 4B settings
+│   └── ornith10.yaml        # Ornith 1.0 9B settings
 │
 ├── notebooks/
 │   └── self_contained.ipynb  # ONLY notebook (full pipeline)
@@ -233,14 +230,14 @@ models:
   gemma4:
     name: unsloth/gemma-4-E4B-it
     r: 32                    # LoRA rank
-    lora_alpha: 64           # LoRA scaling
+    lora_alpha: 32           # LoRA scaling (alpha == r for rsLoRA)
     max_seq_length: 4096    # Max token length (limited by T4 VRAM)
     batch_size: 1           # Batch size (limited by T4 VRAM)
     load_in_4bit: true      # 4-bit QLoRA
     
 training:
   num_train_epochs: 3
-  learning_rate: 1.0e-4
+  learning_rate: 2.0e-4
   gradient_accumulation_steps: 4
 ```
 
@@ -261,7 +258,7 @@ model:
     - up_proj
     - down_proj
   r: 32
-  lora_alpha: 64
+  lora_alpha: 32
 ```
 
 ## Adding a New Model
