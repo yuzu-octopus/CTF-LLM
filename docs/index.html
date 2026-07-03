@@ -4,16 +4,16 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CTF-LLM | Fine-tune LLMs to solve CTF challenges</title>
-  <meta name="description" content="End-to-end pipeline for fine-tuning open-source LLMs on CTF challenges and competitive programming using Unsloth + QLoRA on Google Colab T4.">
+  <meta name="description" content="End-to-end pipeline for fine-tuning open-source LLMs (Gemma 4, Qwen 3.5, Ornith 1.0) on CTF challenges and competitive programming using Unsloth + QLoRA on Google Colab T4.">
   <meta name="theme-color" content="#282a36">
   <meta property="og:type" content="website">
   <meta property="og:title" content="CTF-LLM | Fine-tune LLMs to solve CTF challenges">
-  <meta property="og:description" content="End-to-end pipeline for fine-tuning open-source LLMs on CTF challenges and competitive programming using Unsloth + QLoRA on Google Colab T4.">
+  <meta property="og:description" content="End-to-end pipeline for fine-tuning open-source LLMs (Gemma 4, Qwen 3.5, Ornith 1.0) on CTF challenges and competitive programming using Unsloth + QLoRA on Google Colab T4.">
   <meta property="og:url" content="https://yuzu-octopus.github.io/CTF-LLM/">
   
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="CTF-LLM | Fine-tune LLMs to solve CTF challenges">
-  <meta name="twitter:description" content="End-to-end pipeline for fine-tuning open-source LLMs on CTF challenges and competitive programming using Unsloth + QLoRA on Google Colab T4.">
+  <meta name="twitter:description" content="End-to-end pipeline for fine-tuning open-source LLMs (Gemma 4, Qwen 3.5, Ornith 1.0) on CTF challenges and competitive programming using Unsloth + QLoRA on Google Colab T4.">
   
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2210%22%20fill%3D%22%23282a36%22/%3E%0A%20%20%3Cpath%20d%3D%22M22%2024%20L28%2032%20L22%2040%22%20fill%3D%22none%22%20stroke%3D%22%236272a4%22%20stroke-width%3D%222.5%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22/%3E%0A%20%20%3Cpolygon%20points%3D%2248%2C26%2050%2C29%2052%2C30%2050%2C31%2048%2C34%2046%2C31%2044%2C30%2046%2C29%22%20fill%3D%22%23bd93f9%22/%3E%0A%20%20%3Cpolygon%20points%3D%2238%2C20%2039%2C22%2041%2C23%2039%2C24%2038%2C26%2037%2C24%2035%2C23%2037%2C22%22%20fill%3D%22%2350fa7b%22/%3E%0A%20%20%3Cpolygon%20points%3D%2254%2C20%2055%2C21%2056%2C22%2055%2C23%2054%2C24%2053%2C23%2052%2C22%2053%2C21%22%20fill%3D%22%23ff79c6%22/%3E%0A%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -498,7 +498,7 @@
 
 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="5" y="5" width="14" height="14" rx="2"/><rect x="8" y="8" width="8" height="8" rx="1"/><path d="M5 10H3"/><path d="M5 14H3"/><path d="M21 10h-2"/><path d="M21 14h-2"/><path d="M10 3v2"/><path d="M14 3v2"/><path d="M10 19v2"/><path d="M14 19v2"/></svg>
 
-</span> Supported Models</a></li>
+</span> Supported Models (5)</a></li>
       
       <li><a href="#modes"><span class="icon">
 
@@ -546,7 +546,7 @@
     <div class="container">
       <h1>CTF-LLM</h1>
       <p class="tagline">Fine-tune LLMs to solve CTF challenges</p>
-      <p class="subtitle">End-to-end pipeline for fine-tuning open-source LLMs (Gemma 4, Qwen 3.5) on cybersecurity CTF challenges using Unsloth + QLoRA on Google Colab's free T4 GPU.</p>
+      <p class="subtitle">End-to-end pipeline for fine-tuning open-source LLMs (Gemma 4, Qwen 3.5, Ornith 1.0) on cybersecurity CTF challenges using Unsloth + QLoRA on Google Colab's free T4 GPU.</p>
       <div class="cta">
         <a href="https://github.com/yuzu-octopus/CTF-LLM" class="btn btn-primary">View on GitHub</a>
         
@@ -570,8 +570,8 @@
         </div>
         
         <div class="card">
-          <h3>4 Models Supported</h3>
-          <p>Gemma 4 E4B, Gemma 4 12B, Qwen 3.5 9B, Qwen 3.5 4B — all running 4-bit QLoRA on a free T4 GPU (16GB VRAM).</p>
+          <h3>5 Models Supported</h3>
+          <p>Gemma 4 E4B, Gemma 4 12B, Qwen 3.5 9B, Qwen 3.5 4B, Ornith 1.0 9B — all running 4-bit QLoRA on a free T4 GPU (16GB VRAM).</p>
         </div>
         
         <div class="card">
@@ -592,7 +592,7 @@
   
   <section id="models">
     <div class="container">
-      <h2>Supported Models</h2>
+      <h2>Supported Models (5)</h2>
 
       
       <div style="overflow-x: auto;">

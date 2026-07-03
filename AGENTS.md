@@ -29,10 +29,10 @@ finetuning/
 │   ├── process_data.py      # Alpaca → ChatML conversion
 │   ├── gen_eval_bench.py    # Generates 210-ctf benchmark (datagen, --output flag, no GPU)
 │   └── eval.py              # CTF model evaluator (210-question benchmark)
-├── tests/                   # 68 tests across 8 files
+├── tests/                   # 70 tests across 7 files
 │   ├── test_eval.py, test_eval_orchestration.py
 │   ├── test_gen_eval_bench.py
-│   ├── test_build_dataset.py, test_build_dataset_expanded.py
+│   ├── test_build_dataset.py
 │   └── test_download_datasets.py, test_loss_masking.py, test_process_data.py
 ├── data/eval/
 │   └── ctf_bench.jsonl      # 210 curated CTF challenges (pwn/rev/crypto/web)
@@ -73,7 +73,7 @@ uv run src/gen_eval_bench.py  # outputs to data/eval/ctf_bench.jsonl
 ./finetune.sh gemma4 --eval
 
 # Run the test suite
-uv run pytest tests/ -v  # 68 tests
+uv run pytest tests/ -v  # 70 tests
 
 # Verify output
 head -1 data/merged/train.jsonl | python -m json.tool
@@ -96,7 +96,7 @@ grep -c '"output": ""' data/merged/train.jsonl  # should be 0
 
 The notebook supports two training modes with different dataset sizes:
 
-| Parameter | Fast (~30 min) | Full (~50-70 min) |
+| Parameter | Fast (~30 min) | Full (~70-100 min) |
 |-----------|----------------|-------------------|
 | MAX_PER_REPO | 30 | 999999 (no limit) |
 | MAX_HF_SAMPLES | 200 | 999999 (no limit) |
@@ -104,8 +104,8 @@ The notebook supports two training modes with different dataset sizes:
 | MAX_OUTPUT_LEN | 2000 chars | 20000 chars (safety cap) |
 | MAX_SEQ_LENGTH | 2048 | 4096 |
 | LORA_R | 8 | 32 |
-| LORA_ALPHA | 16 | 64 |
-| NUM_EPOCHS | 1 | 2 |
+| LORA_ALPHA | 8 | 32 |
+| NUM_EPOCHS | 1 | 3 |
 
 Set `MODE = "fast"` or `MODE = "quality"` in notebook Section 2.0.
 
