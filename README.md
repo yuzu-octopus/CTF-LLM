@@ -302,7 +302,7 @@ To add the notebook to a new model, just create `configs/<model>.yaml` and regen
 | GPU | NVIDIA T4 (16GB) - free on Colab |
 | VRAM | ~12GB used with QLoRA |
 | Training time (Fast) | ~30 min for ~500 examples |
-| Training time (Full) | ~50-70 min for ~2500+ examples |
+| Training time (Full) | ~70-100 min for ~2500+ examples |
 | Storage | ~2GB for data, ~4GB for model |
 
 ## Export Formats
