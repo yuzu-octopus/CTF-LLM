@@ -164,6 +164,7 @@ cells = [
         "USE_RSLORA = mc.get(\"use_rslora\", True)",
         "NEFTUNE_ALPHA = tc.get(\"neftune_noise_alpha\", 5)",
         "",
+        "LEARNING_RATE = float(tc.get(\"learning_rate\", 2e-4))",
         "if MODE == \"fast\":",
         "    LORA_R = min(LORA_R, 8)",
         "    LORA_ALPHA = min(LORA_ALPHA, 16)",

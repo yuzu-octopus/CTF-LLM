@@ -13,6 +13,7 @@ import hashlib
 import time
 from pathlib import Path
 import tempfile
+import uuid
 
 import requests
 from git import Repo
@@ -349,6 +350,7 @@ def build_ctfdojo_dataset(output_path: str, max_samples: int = 500) -> list:
 
 
 def build_writeups_dataset(output_path: str, max_per_repo: int = 500):
+    _run_id = uuid.uuid4().hex[:8]
     """Build dataset from CTF writeup repos"""
     import concurrent.futures
 

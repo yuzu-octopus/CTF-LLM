@@ -45,9 +45,14 @@ def wilson_ci(count: int, n: int, z: float = 1.96) -> tuple[float, float]:
 
 def _model_name(model_key: str) -> str:
     """Map model key to HuggingFace model name."""
-    from src.train import load_config
-    config = load_config(model_key)
-    return config.get("model", config).get("name", model_key)
+    from pathlib import Path as _P
+    import yaml as _yaml
+    config_path = _P("configs") / f"{model_key}.yaml"
+    if not config_path.exists():
+        config_path = _P("config.yaml")
+    with open(config_path) as f:
+        cfg = _yaml.safe_load(f)
+    return cfg.get("model", cfg).get("name", model_key)
 
 
 
@@ -97,12 +102,10 @@ def generate_response(model, tokenizer, system_prompt: str, user_prompt: str,
     responses = []
     for _ in range(n_samples):
         with torch.no_grad():
-            outputs = model.generate(
-                **inputs,
-                max_new_tokens=max_new_tokens,
-                do_sample=(n_samples > 1),
-                temperature=0.6 if n_samples > 1 else None,
-            )
+            gen_kwargs = {"max_new_tokens": max_new_tokens, "do_sample": (n_samples > 1)}
+            if n_samples > 1:
+                gen_kwargs["temperature"] = 0.6
+            outputs = model.generate(**inputs, **gen_kwargs)
         responses.append(actual_tokenizer.decode(outputs[0][input_len:], skip_special_tokens=True).strip())
     return responses
 
@@ -272,8 +275,8 @@ def check_contamination(benchmarks: list[dict]):
         print(f"  Bench ∩ Train overlap: {len(overlap)}/{len(bench_hashes)} challenges")
         if len(overlap) / max(len(bench_hashes), 1) > 0.05:
             print("  ⚠  >5% of bench is in training corpus — scores may be inflated")
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"  Warning: contamination check failed: {e}")
 
 
 def run_evaluation(model_key: str, adapter_path: str, bench_path: str = None,

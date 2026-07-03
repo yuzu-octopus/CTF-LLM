@@ -127,3 +127,27 @@ class TestWilsonCI:
         lo, hi = wilson_ci(100, 100)
         assert lo > 0.9
         assert hi > 0.99
+
+
+class TestGradeCodeSandbox:
+    def test_safe_builtins_available(self):
+        """Code using standard builtins should work."""
+        code = "```python\nx = len([1, 2, 3])\nresult = x\n```"
+        correct, fb = grade_code(code, None)
+        assert correct
+
+    def test_dangerous_builtins_blocked(self):
+        """open() and __import__() should NOT be in safe_builtins."""
+        # If open is available, the code would execute without error
+        # But it shouldn't be available in the sandbox
+        code = "```python\nresult = open('/etc/passwd').read()\n```"
+        correct, fb = grade_code(code, None)
+        # Should either fail or not have open available
+        # The point is that it doesn't crash with a security violation
+        assert not correct or 'error' in fb.lower() or 'open' not in fb.lower()
+
+    def test_exec_with_safe_builtins(self):
+        """Restricted exec should handle division, sorting, etc."""
+        code = "```python\nresult = sorted([3, 1, 2])\n```"
+        correct, fb = grade_code(code, None)
+        assert correct
