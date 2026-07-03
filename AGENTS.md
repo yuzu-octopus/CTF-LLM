@@ -37,7 +37,7 @@ finetuning/
 ├── data/eval/
 │   └── ctf_bench.jsonl      # 210 curated CTF challenges (pwn/rev/crypto/web)
 ├── configs/
-│   ├── gemma4.yaml, gemma4-12b.yaml, qwen35.yaml, qwen35-4b.yaml, ornith10.yaml, ornith10.yaml
+│   ├── gemma4.yaml, gemma4-12b.yaml, qwen35.yaml, qwen35-4b.yaml, ornith10.yaml
 ├── notebooks/
 │   └── self_contained.ipynb   # ONLY notebook — full pipeline
 ├── data/{raw,processed,merged}/       # gitignored
@@ -203,20 +203,20 @@ uv run src/process_data.py --merge --input data/processed --output data/merged
 | Model | Mode | r | alpha | seq_len | epochs | grad_accum | Notes |
 |-------|------|---|-------|---------|--------|------------|-------|
 | gemma4 | fast | 8 | 16 | 2048 | 1 | 4 | E4B, comfortable on T4 |
-| gemma4 | quality | 32 | 64 | 4096 | 2 | 8 | E4B, comfortable on T4 |
+| gemma4 | quality | 32 | 32 | 4096 | 3 | 8 | E4B, comfortable on T4 |
 | gemma4-12b | fast | 8 | 16 | 2048 | 1 | 4 | 12B, tight on T4 (~10-11GB) |
-| gemma4-12b | quality | 32 | 64 | 4096 | 2 | 8 | 12B, tight on T4 (~10-11GB) |
+| gemma4-12b | quality | 32 | 32 | 4096 | 3 | 8 | 12B, tight on T4 (~10-11GB) |
 | qwen35-4b | fast | 8 | 16 | 2048 | 1 | 4 | 4B, comfortable on T4 |
-| qwen35-4b | quality | 16 | 32 | 4096 | 2 | 4 | 4B, comfortable on T4 |
+| qwen35-4b | quality | 16 | 16 | 4096 | 3 | 4 | 4B, comfortable on T4 |
 | qwen35 | fast | 8 | 16 | 2048 | 1 | 4 | 9B, comfortable on T4 |
-| qwen35 | quality | 32 | 64 | 4096 | 2 | 8 | 9B, comfortable on T4 |
+| qwen35 | quality | 32 | 32 | 4096 | 3 | 8 | 9B, comfortable on T4 |
 | ornith10 | fast | 8 | 16 | 2048 | 1 | 4 | 9B, comfortable on T4 |
-| ornith10 | quality | 32 | 64 | 4096 | 2 | 4 | 9B, rsLoRA, comfortable on T4 |
+| ornith10 | quality | 32 | 32 | 4096 | 3 | 4 | 9B, rsLoRA, comfortable on T4 |
 
 To add a new model:
 1. Create `configs/<name>.yaml`
 2. Add entry under `models:` in `config.yaml`
-3. Add `(model, mode)` entries to notebook MODEL_CONFIGS dict
+3. Run `python3 scripts/generate_notebook.py` to regenerate notebook
 4. Update `finetune.sh` model list + config upload line
 5. Run `./finetune.sh <name> --all`
 
