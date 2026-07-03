@@ -108,7 +108,7 @@ def process_jsonl_file(input_path: Path, output_path: Path, system_prompt_mode: 
                 except Exception as e:
                     skipped += 1
                     if skipped <= 5:
-                        print(f"  Warning: skipped line {i+1}: {str(e)[:100]}")
+                        print(f"  Warning: skipped line {count + skipped}: {str(e)[:100]}")
                     continue
 
     elapsed = time.time() - start_time

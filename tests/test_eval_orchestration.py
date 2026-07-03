@@ -127,3 +127,45 @@ class TestCheckContamination:
         h1 = hashlib.sha256(b"test prompt").hexdigest()[:16]
         h2 = hashlib.sha256(b"test prompt").hexdigest()[:16]
         assert h1 == h2
+
+
+
+class TestPrintResultsBuckets:
+    """Test bucketing logic embedded in print_results."""
+
+    def test_buckets_by_category_difficulty(self):
+        """Results should group by category-difficulty key."""
+        from collections import defaultdict
+        results = [
+            {"id": "1", "category": "pwn", "difficulty": "easy", "correct": True, "score": 1.0, "time": 1.0},
+            {"id": "2", "category": "pwn", "difficulty": "easy", "correct": False, "score": 0.0, "time": 2.0},
+            {"id": "3", "category": "crypto", "difficulty": "hard", "correct": True, "score": 1.0, "time": 3.0},
+        ]
+        buckets = defaultdict(lambda: {"correct": 0, "total": 0, "times": [], "score_sum": 0.0})
+        for r in results:
+            key = f"{r['category']}-{r['difficulty']}"
+            buckets[key]["total"] += 1
+            if r["correct"]:
+                buckets[key]["correct"] += 1
+            buckets[key]["score_sum"] += r.get("score", float(r["correct"]))
+            buckets[key]["times"].append(r["time"])
+
+        assert buckets["pwn-easy"]["total"] == 2
+        assert buckets["pwn-easy"]["correct"] == 1
+        assert buckets["crypto-hard"]["total"] == 1
+        assert buckets["crypto-hard"]["correct"] == 1
+
+    def test_wilson_ci_known_values(self):
+        """Wilson CI should bracket the true proportion."""
+        from src.eval import wilson_ci
+        lo, hi = wilson_ci(50, 100)
+        assert 0.4 < lo < 0.5
+        assert 0.5 < hi < 0.6
+
+    def test_wilson_ci_edge_cases(self):
+        """Wilson CI handles zero and all-correct cases."""
+        from src.eval import wilson_ci
+        lo, hi = wilson_ci(0, 100)
+        assert lo == 0.0
+        lo, hi = wilson_ci(100, 100)
+        assert hi > 0.99

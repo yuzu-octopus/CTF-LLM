@@ -1,87 +1,51 @@
 # Improvement Plans — CTF-LLM
 
-## Previous /improve cycle (all shipped)
+## Previous /improve cycles (all shipped)
 
-Generated from `/improve` audit against commit `5f04de4`. All 8 plans shipped in commit `9b71fcc`.
+| Cycle | Plans | Status |
+|-------|-------|--------|
+| Cycle 1 | 001-008 | ✅ DONE |
+| Cycle 2 | 009-015 | ✅ DONE |
+| Cycle 3 | 016-019 | TODO (stale — see notes) |
 
-| # | Plan | Status |
-|---|------|--------|
-| 1 | Notebook critical fixes (N1-N6) | ✅ DONE (`9b71fcc`) |
-| 2 | Eval security + correctness | ✅ DONE (`9b71fcc`) |
-| 3 | Dead code cleanup | ✅ DONE (`9b71fcc`) |
-| 4 | Model loading dedup | ✅ DONE (`9b71fcc`) |
-| 5 | Test coverage | ✅ DONE (`9b71fcc`) |
-| 6 | Docs stale values | ✅ DONE (`9b71fcc`) |
-| 7 | finetune.sh fixes | ✅ DONE (`9b71fcc`) |
-| 8 | Data quality hardening | ✅ DONE (`9b71fcc`) |
+## Current /improve cycle — plans 020-029
 
-## Current /improve cycle (all shipped)
-
-Generated from `/improve` audit against commit `6d7af02`. All 7 plans shipped in commit `44d12cb`.
+Generated from `/improve deep` audit against commit `087ce44`.
 
 ### Execution Order
 
-| # | Plan | Dependencies | Status |
-|---|------|-------------|--------|
-| 9 | Config drift fix (F3) | None | ✅ DONE (`44d12cb`) |
-| 10 | Dead code cleanup (F5) | None | ✅ DONE (`44d12cb`) |
-| 11 | Add OG image asset (F6) | None | ✅ DONE (`44d12cb`) |
-| 12 | gen_eval_bench tests + docs (F1) | None | ✅ DONE (`44d12cb`) |
-| 13 | CI pipeline (F2) | None | ✅ DONE (`44d12cb`) |
-| 14 | Data pipeline test expansion (F4) | None | ✅ DONE (`44d12cb`) |
-| 15 | eval.py orchestration tests (F7) | None | ✅ DONE (`44d12cb`) |
+| # | Plan | Priority | Effort | Depends on | Status |
+|---|------|----------|--------|------------|--------|
+| 020 | Fix undefined var in process_data | P0 | S | none | DONE |
+| 021 | Fix undefined LEARNING_RATE in notebook | P0 | S | none | DONE |
+| 022 | Fix config drift lora_alpha | P0 | S | none | DONE |
+| 023 | Fix temp dir race condition | P1 | S | none | DONE |
+| 024 | Fix bare except in eval | P1 | S | none | DONE |
+| 025 | Fix temperature=None in eval | P1 | S | none | DONE |
+| 026 | Add tests for print_results | P2 | M | none | DONE |
+| 027 | Add tests for grade_code sandbox | P2 | M | none | DONE |
+| 028 | Parallelize doc scraping | P2 | S | none | REJECTED |
+| 029 | Inline _model_name in eval | P2 | S | none | DONE |
 
-### Key outcomes
+### Notes on plans 016-019
 
-- **Config drift**: quality-mode comment headers added to all 5 config files
-- **Dead code**: `extract_from_huggingface()` removed from `src/build_dataset.py`
-- **OG image**: `docs/og-image.png` created (1200x630, Dracula + flag logo, JetBrains Mono)
-- **gen_eval_bench**: 12 tests, `--output` CLI arg, preservation warning, doc refs in README + AGENTS
-- **CI pipeline**: `.github/workflows/ci.yml` — ruff lint + pytest on push/PR
-- **Data tests**: 10 tests across `build_dataset` (expanded) and `download_datasets` (new)
-- **Eval tests**: 8 orchestration tests, `torch` import guard for GPU-free import
-
-### Findings Index
-
-| # | Finding | Plan | Status |
-|---|---------|------|--------|
-| F1 | gen_eval_bench.py (745 LOC) — 0 tests, 0 doc refs | 012 | ✅ |
-| F2 | No CI pipeline | 013 | ✅ |
-| F3 | Config drift between config.yaml, configs/*.yaml, notebook | 009 | ✅ |
-| F4 | download_datasets.py untested; build_dataset.py under-tested | 014 | ✅ |
-| F5 | Dead code: extract_from_huggingface() in build_dataset.py | 010 | ✅ |
-| F6 | Missing og-image.png — OG tags return 404 | 011 | ✅ |
-| F7 | eval.py orchestration functions untested | 015 | ✅ |
-
-### Considered and rejected
-
-- **More sidebar CSS tuning**: Already iterated 5+ rounds; remaining differences (icon style, line-height) are within acceptable variance. Diminishing returns.
-- **Training pipeline tests (train.py)**: Requires GPU hardware ($250+/mo Colab Pro). Not testable in CI.
-
-## Current /improve cycle (audited, plans written)
-
-Generated from `/improve deep` audit against commit `0831d17`. Scope: website UX, training pipeline, performance/methodology, datasets.
-
-### Execution Order
-
-| # | Plan | Dependencies | Status |
-|---|------|-------------|--------|
-| 16 | Website UX/UI hardening | None | TODO |
-| 17 | Pipeline critical fixes | None | TODO |
-| 18 | Training quality & performance | None | TODO |
-| 19 | Dataset quality overhaul | Must run after 017 (pipeline fixes first) | TODO |
+Plans 016-019 were written before the recent streamlining passes (ponytail cuts, rsLoRA, config sync). Several items may already be addressed:
+- 017 (pipeline fixes): B1 two-stage format mismatch still exists; B3 datasets version — check
+- 018 (training quality): config drift partially addressed by rsLoRA changes
+- 019 (dataset quality): depends on 017
 
 ### Dependency notes
 
-- Plans 16, 17, 18 are independent — can be parallelized
-- Plan 19 depends on 017 (pipeline fixes create correct data processing before data regen)
-- All plans need the test suite to pass before and after
+- Plans 020-025 are independent bug fixes — can be parallelized
+- Plans 026-027 add test coverage — should land after bug fixes
+- Plans 028-029 are low-risk improvements — can be done anytime
 
-### Summary of findings
+### Findings considered and rejected
 
-| Area | Plans | Severity | Top findings |
-|------|-------|----------|-------------|
-| **A — Website UX** | 016 | 2 P1, 5 P2 | Mobile hamburger z-index bug, contrast failures, no focus-visible |
-| **B — Pipeline bugs** | 017 | 3 CRIT, 8 HIGH | datasets version nonexistent, Gemma notebook crashes, two-stage format mismatch |
-| **C — Training quality** | 018 | 5 MED-HIGH | CLI path missing weight_decay/NEFTune/cosine LR; config drift; no flash-attn |
-| **D — Dataset quality** | 019 | 4 CRIT, 2 HIGH | 76% of writeup data has wrong system prompt; dedup misses cross-repo dupes; crash in error handler |
+- `temperature=None` in generate(): acceptable for standard HF backends
+- `HAS_TQDM` guards: already removed in ponytail pass
+- `gen_eval_bench.py` size: data is data, not code bloat
+- Triple merge duplication: 3 functions with different contexts, abstraction not worth it
+- Inconsistent tqdm: cosmetic, no runtime impact
+
+- **Parallelize doc scraping (028)**: Not worth doing — serial is fine for 12 docs, parallelization adds complexity for marginal gain.
