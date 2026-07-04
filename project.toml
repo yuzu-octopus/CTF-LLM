@@ -82,29 +82,40 @@ cells = ["Epochs", "1", "3"]
 
 [[sections]]
 id = "pipeline"
-type = "steps"
+type = "workflow"
 title = "Pipeline"
 icon = "layers"
 
 [[sections.items]]
-title = "1. Scrape Writeups"
+title = "Scrape Writeups"
 body = "Collects CTF writeups from 13 GitHub repos, parses flag formats and solution approaches."
 
 [[sections.items]]
-title = "2. Process to ChatML"
+title = "Process to ChatML"
 body = "Converts raw writeups and HuggingFace datasets into structured ChatML training examples."
 
 [[sections.items]]
-title = "3. Train with QLoRA"
-body = "4-bit QLoRA fine-tuning via Unsloth on Colab T4 GPU — Fast mode (rank 8, ~30 min) or Quality mode (rank 32, ~100 min)."
+title = "Train with QLoRA"
+body = "4-bit QLoRA fine-tuning via Unsloth on Colab T4 GPU — Fast (rank 8, ~30 min) or Quality (rank 32, ~100 min)."
 
 [[sections.items]]
-title = "4. Evaluate"
+title = "Evaluate"
 body = "Runs against a 210-question benchmark across pwn, rev, crypto, web at easy/medium/hard."
 
 [[sections.items]]
-title = "5. Analyze"
-body = "Wilson 95% CI, McNemar's paired test, contamination checks, and cheating detection."
+title = "Analyze"
+body = "Wilson 95% CI, McNemar's test, contamination checks, and cheating detection."
+
+[[sections]]
+id = "notice"
+type = "notice"
+title = "Hardware Note"
+icon = "info"
+notice_type = "info"
+body = """
+<p>All training runs on a <strong>free Google Colab T4 GPU</strong> (16GB VRAM).
+The 4-bit QLoRA quantization makes this possible — no paid tier required.</p>
+"""
 
 [[sections]]
 id = "benchmark"
