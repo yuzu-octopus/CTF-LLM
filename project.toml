@@ -18,32 +18,6 @@ logo_svg = """
 tagline = "fine-tune · CTF · qLoRA"
 
 [[sections]]
-id = "timeline"
-type = "timeline"
-title = "Project Milestones"
-icon = "calendar"
-
-[[sections.items]]
-title = "Writeup Scraping"
-body = "Built web scraper to collect CTF writeups from 13 GitHub repositories, parsing flag formats and solution approaches."
-date = "2025-03"
-
-[[sections.items]]
-title = "Dataset Curation"
-body = "Assembled 2500+ training examples from scraped writeups and HuggingFace datasets, processed into ChatML format."
-date = "2025-04"
-
-[[sections.items]]
-title = "QLoRA Training Pipeline"
-body = "Implemented Unsloth QLoRA fine-tuning on Colab T4 with Fast and Quality modes, supporting 5 models."
-date = "2025-05"
-
-[[sections.items]]
-title = "Benchmark Evaluation"
-body = "Created 210-question evaluation set across pwn, rev, crypto, web with Wilson CI, McNemar's test, and contamination checking."
-date = "2025-06"
-
-[[sections]]
 id = "features"
 type = "features"
 title = "Features"
