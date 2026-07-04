@@ -21,7 +21,7 @@ tagline = "fine-tune · CTF · qLoRA"
 id = "timeline"
 type = "timeline"
 title = "Project Milestones"
-icon = "play"
+icon = "calendar"
 
 [[sections.items]]
 title = "Writeup Scraping"
@@ -91,7 +91,7 @@ cells = ["Ornith 1.0 9B", "~9B", "8", "32", "~7GB", "Comfortable"]
 id = "modes"
 type = "table"
 title = "Training Modes"
-icon = "layers"
+icon = "chip"
 headers = ["Parameter", "Fast (~30 min)", "Quality (~70-100 min)"]
 
 [[sections.rows]]
@@ -110,7 +110,7 @@ cells = ["Epochs", "1", "3"]
 id = "pipeline"
 type = "workflow"
 title = "Pipeline"
-icon = "link"
+icon = "rocket"
 
 [[sections.items]]
 title = "Scrape Writeups"
