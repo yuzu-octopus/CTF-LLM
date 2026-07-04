@@ -7,11 +7,11 @@ github_url = "https://github.com/yuzu-octopus/CTF-LLM"
 page_url = "https://yuzu-octopus.github.io/CTF-LLM/"
 logo_svg = """
 <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-  <rect width="64" height="64" rx="14" fill="#44475a"/>
-  <path d="M20 24 L28 32 L20 40" fill="none" stroke="#6272a4" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-  <polygon points="48,22 50,26 54,28 50,30 48,34 46,30 42,28 46,26" fill="#bd93f9"/>
-  <polygon points="34,14 36,17 38,18 36,19 34,22 32,19 30,18 32,17" fill="#50fa7b"/>
-  <polygon points="54,15 55,17 57,18 55,19 54,21 53,19 51,18 53,17" fill="#ff79c6"/>
+  <rect width="64" height="64" rx="14" fill="var(--panel)"/>
+  <path d="M20 24 L28 32 L20 40" fill="none" stroke="var(--muted)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <polygon points="48,22 50,26 54,28 50,30 48,34 46,30 42,28 46,26" fill="var(--purple)"/>
+  <polygon points="34,14 36,17 38,18 36,19 34,22 32,19 30,18 32,17" fill="var(--green)"/>
+  <polygon points="54,15 55,17 57,18 55,19 54,21 53,19 51,18 53,17" fill="var(--pink)"/>
 </svg>"""
 
 [brand]
@@ -81,6 +81,32 @@ cells = ["Max seq length", "2048", "4096"]
 cells = ["Epochs", "1", "3"]
 
 [[sections]]
+id = "pipeline"
+type = "steps"
+title = "Pipeline"
+icon = "layers"
+
+[[sections.items]]
+title = "1. Scrape Writeups"
+body = "Collects CTF writeups from 13 GitHub repos, parses flag formats and solution approaches."
+
+[[sections.items]]
+title = "2. Process to ChatML"
+body = "Converts raw writeups and HuggingFace datasets into structured ChatML training examples."
+
+[[sections.items]]
+title = "3. Train with QLoRA"
+body = "4-bit QLoRA fine-tuning via Unsloth on Colab T4 GPU — Fast mode (rank 8, ~30 min) or Quality mode (rank 32, ~100 min)."
+
+[[sections.items]]
+title = "4. Evaluate"
+body = "Runs against a 210-question benchmark across pwn, rev, crypto, web at easy/medium/hard."
+
+[[sections.items]]
+title = "5. Analyze"
+body = "Wilson 95% CI, McNemar's paired test, contamination checks, and cheating detection."
+
+[[sections]]
 id = "benchmark"
 type = "text"
 title = "Benchmark"
@@ -91,7 +117,7 @@ body = """
   <li style="padding:8px 0;border-bottom:1px solid var(--muted);"><strong style="color:var(--purple);">Categories</strong> &mdash; pwn (57), rev (50), crypto (50), web (53)</li>
   <li style="padding:8px 0;border-bottom:1px solid var(--muted);"><strong style="color:var(--purple);">Difficulties</strong> &mdash; easy (72), medium (79), hard (59)</li>
   <li style="padding:8px 0;border-bottom:1px solid var(--muted);"><strong style="color:var(--purple);">Task types</strong> &mdash; flag_extraction, multiple_choice, code_generation, vulnerability_identification, patch_generation, exploit_trace</li>
-  <li style="padding:8px 0;"><strong style="color:var(--purple);">Statistical rigor</strong> &mdash; Wilson 95% CI (±6.8%), McNemar's test, contamination check, cheating detection</li>
+  <li style="padding:8px 0;"><strong style="color:var(--purple);">Statistical rigor</strong> &mdash; Wilson 95% CI (&plusmn;6.8%), McNemar's test, contamination check, cheating detection</li>
 </ul>
 """
 
@@ -100,6 +126,7 @@ id = "quickstart"
 type = "code_block"
 title = "Quick Start"
 icon = "play"
+language = "bash"
 code = """
 # Install dependencies
 uv sync
@@ -115,7 +142,8 @@ uv sync
 id = "notebook"
 type = "code_block"
 title = "Notebook Generation"
-icon = "play"
+icon = "gear"
+language = "bash"
 code = """
 # The Colab notebook is auto-generated — never edit it directly.
 # It bakes all src/*.py + configs/*.yaml into a decode cell.
