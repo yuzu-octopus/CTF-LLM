@@ -702,11 +702,11 @@
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-brand">
     <div class="logo"><svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-  <rect width="64" height="64" rx="14" fill="#44475a"/>
-  <path d="M20 24 L28 32 L20 40" fill="none" stroke="#6272a4" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-  <polygon points="48,22 50,26 54,28 50,30 48,34 46,30 42,28 46,26" fill="#bd93f9"/>
-  <polygon points="34,14 36,17 38,18 36,19 34,22 32,19 30,18 32,17" fill="#50fa7b"/>
-  <polygon points="54,15 55,17 57,18 55,19 54,21 53,19 51,18 53,17" fill="#ff79c6"/>
+  <rect width="64" height="64" rx="14" fill="var(--panel)"/>
+  <path d="M20 24 L28 32 L20 40" fill="none" stroke="var(--muted)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <polygon points="48,22 50,26 54,28 50,30 48,34 46,30 42,28 46,26" fill="var(--purple)"/>
+  <polygon points="34,14 36,17 38,18 36,19 34,22 32,19 30,18 32,17" fill="var(--green)"/>
+  <polygon points="54,15 55,17 57,18 55,19 54,21 53,19 51,18 53,17" fill="var(--pink)"/>
 </svg></div>
     <div class="name">CTF-LLM</div>
     <div class="tagline">fine-tune · CTF · qLoRA</div>
@@ -734,6 +734,11 @@
 <span class="material-symbols-outlined icon-layers" aria-hidden="true">layers</span>
 </span> Training Modes</a></li>
       
+      <li><a href="#pipeline"><span class="icon">
+
+<span class="material-symbols-outlined icon-layers" aria-hidden="true">layers</span>
+</span> Pipeline</a></li>
+      
       <li><a href="#benchmark"><span class="icon">
 
 <span class="material-symbols-outlined icon-document" aria-hidden="true">description</span>
@@ -746,7 +751,7 @@
       
       <li><a href="#notebook"><span class="icon">
 
-<span class="material-symbols-outlined icon-play" aria-hidden="true">play_arrow</span>
+<span class="material-symbols-outlined icon-gear" aria-hidden="true">settings</span>
 </span> Notebook Generation</a></li>
       
       <li><a href="#stack"><span class="icon">
@@ -875,6 +880,31 @@
     </div>
   </section>
   
+  <section id="pipeline" class="reveal">
+    <div class="container">
+      
+      <h2>Pipeline</h2>
+      
+
+      
+      <ul class="steps">
+        
+        <li><strong>1. Scrape Writeups</strong> &mdash; Collects CTF writeups from 13 GitHub repos, parses flag formats and solution approaches.</li>
+        
+        <li><strong>2. Process to ChatML</strong> &mdash; Converts raw writeups and HuggingFace datasets into structured ChatML training examples.</li>
+        
+        <li><strong>3. Train with QLoRA</strong> &mdash; 4-bit QLoRA fine-tuning via Unsloth on Colab T4 GPU — Fast mode (rank 8, ~30 min) or Quality mode (rank 32, ~100 min).</li>
+        
+        <li><strong>4. Evaluate</strong> &mdash; Runs against a 210-question benchmark across pwn, rev, crypto, web at easy/medium/hard.</li>
+        
+        <li><strong>5. Analyze</strong> &mdash; Wilson 95% CI, McNemar's paired test, contamination checks, and cheating detection.</li>
+        
+      </ul>
+
+      
+    </div>
+  </section>
+  
   <section id="benchmark" class="reveal">
     <div class="container">
       
@@ -887,7 +917,7 @@
   <li style="padding:8px 0;border-bottom:1px solid var(--muted);"><strong style="color:var(--purple);">Categories</strong> &mdash; pwn (57), rev (50), crypto (50), web (53)</li>
   <li style="padding:8px 0;border-bottom:1px solid var(--muted);"><strong style="color:var(--purple);">Difficulties</strong> &mdash; easy (72), medium (79), hard (59)</li>
   <li style="padding:8px 0;border-bottom:1px solid var(--muted);"><strong style="color:var(--purple);">Task types</strong> &mdash; flag_extraction, multiple_choice, code_generation, vulnerability_identification, patch_generation, exploit_trace</li>
-  <li style="padding:8px 0;"><strong style="color:var(--purple);">Statistical rigor</strong> &mdash; Wilson 95% CI (±6.8%), McNemar's test, contamination check, cheating detection</li>
+  <li style="padding:8px 0;"><strong style="color:var(--purple);">Statistical rigor</strong> &mdash; Wilson 95% CI (&plusmn;6.8%), McNemar's test, contamination check, cheating detection</li>
 </ul>
 
 
@@ -903,7 +933,7 @@
 
       
       
-      <pre><code># Install dependencies
+      <pre><code class="language-bash"># Install dependencies
 uv sync
 
 # Run full pipeline (build data + train)
@@ -926,7 +956,7 @@ uv sync
 
       
       
-      <pre><code># The Colab notebook is auto-generated — never edit it directly.
+      <pre><code class="language-bash"># The Colab notebook is auto-generated — never edit it directly.
 # It bakes all src/*.py + configs/*.yaml into a decode cell.
 
 # Regenerate:
