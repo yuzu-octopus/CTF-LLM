@@ -379,6 +379,71 @@
       font-size: 0.8rem;
     }
 
+    .workflow {
+      display: flex;
+      gap: 0;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      padding: 16px 0 8px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .workflow-item {
+      flex: 0 0 260px;
+      scroll-snap-align: start;
+      display: flex;
+      flex-direction: column;
+    }
+    .workflow-top {
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+    }
+    .workflow-dot {
+      width: 16px;
+      height: 16px;
+      min-width: 16px;
+      border-radius: 50%;
+      background: var(--purple);
+    }
+    .workflow-line {
+      flex: 1;
+      height: 2px;
+      background: var(--muted);
+      margin-left: 8px;
+    }
+    .workflow-item:last-child .workflow-line { display: none; }
+    .workflow-card {
+      background: var(--panel);
+      border: 1px solid var(--muted);
+      border-radius: 8px;
+      padding: 16px;
+      margin: 8px 8px 0;
+      transition: border-color 0.25s, transform 0.25s;
+    }
+    .workflow-card:hover {
+      border-color: var(--purple);
+      transform: translateY(-2px);
+    }
+    .workflow-step {
+      display: inline-block;
+      font-size: 0.7rem;
+      color: var(--bg);
+      background: var(--purple);
+      padding: 1px 8px;
+      border-radius: 8px;
+      margin-bottom: 8px;
+    }
+    .workflow-card h4 {
+      color: var(--purple);
+      font-size: 1rem;
+      margin-bottom: 6px;
+    }
+    .workflow-card p {
+      color: var(--fg);
+      font-size: 0.8rem;
+      line-height: 1.5;
+    }
+
     table {
       width: 100%;
       border-collapse: separate;
@@ -501,6 +566,49 @@
     .steps li:last-child { border-bottom: none; }
 
     .steps li strong { color: var(--purple); }
+
+    .timeline {
+      list-style: none;
+      padding: 0;
+      position: relative;
+    }
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 7px;
+      top: 4px;
+      bottom: 4px;
+      width: 2px;
+      background: var(--muted);
+      border-radius: 1px;
+    }
+    .timeline-item {
+      position: relative;
+      padding: 0 0 20px 28px;
+    }
+    .timeline-item:last-child { padding-bottom: 0; }
+    .timeline-dot {
+      position: absolute;
+      left: 0;
+      top: 4px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--bg);
+      border: 2px solid var(--purple);
+    }
+    .timeline-content {
+      font-size: 0.85rem;
+      color: var(--fg);
+    }
+    .timeline-date {
+      display: block;
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    .timeline-content strong { color: var(--purple); }
+    .timeline-content p { margin-top: 4px; }
 
     .terms {
       list-style: none;
@@ -739,6 +847,11 @@
 <span class="material-symbols-outlined icon-layers" aria-hidden="true">layers</span>
 </span> Pipeline</a></li>
       
+      <li><a href="#notice"><span class="icon">
+
+<span class="material-symbols-outlined icon-info" aria-hidden="true">info</span>
+</span> Hardware Note</a></li>
+      
       <li><a href="#benchmark"><span class="icon">
 
 <span class="material-symbols-outlined icon-document" aria-hidden="true">description</span>
@@ -887,19 +1000,86 @@
       
 
       
-      <ul class="steps">
+      <div class="workflow">
         
-        <li><strong>1. Scrape Writeups</strong> &mdash; Collects CTF writeups from 13 GitHub repos, parses flag formats and solution approaches.</li>
+        <div class="workflow-item">
+          <div class="workflow-top">
+            <div class="workflow-dot"></div>
+            <div class="workflow-line"></div>
+          </div>
+          <div class="workflow-card">
+            <span class="workflow-step">1</span>
+            <h4>Scrape Writeups</h4>
+            <p>Collects CTF writeups from 13 GitHub repos, parses flag formats and solution approaches.</p>
+          </div>
+        </div>
         
-        <li><strong>2. Process to ChatML</strong> &mdash; Converts raw writeups and HuggingFace datasets into structured ChatML training examples.</li>
+        <div class="workflow-item">
+          <div class="workflow-top">
+            <div class="workflow-dot"></div>
+            <div class="workflow-line"></div>
+          </div>
+          <div class="workflow-card">
+            <span class="workflow-step">2</span>
+            <h4>Process to ChatML</h4>
+            <p>Converts raw writeups and HuggingFace datasets into structured ChatML training examples.</p>
+          </div>
+        </div>
         
-        <li><strong>3. Train with QLoRA</strong> &mdash; 4-bit QLoRA fine-tuning via Unsloth on Colab T4 GPU — Fast mode (rank 8, ~30 min) or Quality mode (rank 32, ~100 min).</li>
+        <div class="workflow-item">
+          <div class="workflow-top">
+            <div class="workflow-dot"></div>
+            <div class="workflow-line"></div>
+          </div>
+          <div class="workflow-card">
+            <span class="workflow-step">3</span>
+            <h4>Train with QLoRA</h4>
+            <p>4-bit QLoRA fine-tuning via Unsloth on Colab T4 GPU — Fast (rank 8, ~30 min) or Quality (rank 32, ~100 min).</p>
+          </div>
+        </div>
         
-        <li><strong>4. Evaluate</strong> &mdash; Runs against a 210-question benchmark across pwn, rev, crypto, web at easy/medium/hard.</li>
+        <div class="workflow-item">
+          <div class="workflow-top">
+            <div class="workflow-dot"></div>
+            <div class="workflow-line"></div>
+          </div>
+          <div class="workflow-card">
+            <span class="workflow-step">4</span>
+            <h4>Evaluate</h4>
+            <p>Runs against a 210-question benchmark across pwn, rev, crypto, web at easy/medium/hard.</p>
+          </div>
+        </div>
         
-        <li><strong>5. Analyze</strong> &mdash; Wilson 95% CI, McNemar's paired test, contamination checks, and cheating detection.</li>
+        <div class="workflow-item">
+          <div class="workflow-top">
+            <div class="workflow-dot"></div>
+            <div class="workflow-line"></div>
+          </div>
+          <div class="workflow-card">
+            <span class="workflow-step">5</span>
+            <h4>Analyze</h4>
+            <p>Wilson 95% CI, McNemar's test, contamination checks, and cheating detection.</p>
+          </div>
+        </div>
         
-      </ul>
+      </div>
+
+      
+    </div>
+  </section>
+  
+  <section id="notice" class="reveal">
+    <div class="container">
+      
+      <h2>Hardware Note</h2>
+      
+
+      
+      <div class="callout callout-info">
+        <p>All training runs on a <strong>free Google Colab T4 GPU</strong> (16GB VRAM).
+The 4-bit QLoRA quantization makes this possible — no paid tier required.</p>
+
+      </div>
 
       
     </div>
