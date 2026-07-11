@@ -65,7 +65,7 @@ cells = ["Ornith 1.0 9B", "~9B", "8", "32", "~7GB", "Comfortable"]
 id = "modes"
 type = "table"
 title = "Training Modes"
-icon = "chip"
+icon = "tune"
 headers = ["Parameter", "Fast (~30 min)", "Quality (~70-100 min)"]
 
 [[sections.rows]]
@@ -119,18 +119,22 @@ The 4-bit QLoRA quantization makes this possible — no paid tier required.</p>
 
 [[sections]]
 id = "benchmark"
-type = "text"
+type = "table"
 title = "Benchmark"
 icon = "document"
-body = """
-<p><strong style="color:var(--purple);">210 questions</strong> across 4 categories and 3 difficulty levels.</p>
-<ul style="list-style:none;padding:0;">
-  <li style="padding:8px 0;border-bottom:1px solid var(--muted);"><strong style="color:var(--purple);">Categories</strong> &mdash; pwn (57), rev (50), crypto (50), web (53)</li>
-  <li style="padding:8px 0;border-bottom:1px solid var(--muted);"><strong style="color:var(--purple);">Difficulties</strong> &mdash; easy (72), medium (79), hard (59)</li>
-  <li style="padding:8px 0;border-bottom:1px solid var(--muted);"><strong style="color:var(--purple);">Task types</strong> &mdash; flag_extraction, multiple_choice, code_generation, vulnerability_identification, patch_generation, exploit_trace</li>
-  <li style="padding:8px 0;"><strong style="color:var(--purple);">Statistical rigor</strong> &mdash; Wilson 95% CI (&plusmn;6.8%), McNemar's test, contamination check, cheating detection</li>
-</ul>
-"""
+headers = ["Metric", "Value"]
+
+[[sections.rows]]
+cells = ["Categories", "pwn (57), rev (50), crypto (50), web (53)"]
+
+[[sections.rows]]
+cells = ["Difficulties", "easy (72), medium (79), hard (59)"]
+
+[[sections.rows]]
+cells = ["Task types", "flag_extraction, multiple_choice, code_generation, vulnerability_identification, patch_generation, exploit_trace"]
+
+[[sections.rows]]
+cells = ["Statistical rigor", "Wilson 95% CI (&plusmn;6.8%), McNemar's test, contamination check, cheating detection"]
 
 [[sections]]
 id = "quickstart"
