@@ -25,6 +25,7 @@ jobs:
           path: generator
       - name: Generate page
         run: |
+          sudo apt-get update && sudo apt-get install -y libcairo2-dev fonts-jetbrains-mono
           pip install jinja2
           python generator/genpage.py --input project.toml --output docs/index.html
       - name: Commit generated page
